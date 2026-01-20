@@ -1,0 +1,56 @@
+# Configuración Jekyll para GitHub Pages
+# Archivo: _config.yml
+
+title: Camping Deals - Ofertas >30%
+description: Las mejores ofertas de camping con mínimo 30% descuento
+baseurl: ""
+url: "https://camping-offers.github.io"
+
+# Build settings
+markdown: kramdown
+theme: minima
+
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# Excluir del build
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+  - scraper
+  - database
+  - marketing
+  - social
+  - analytics
+  - scripts
+  - "*.py"
+  - requirements.txt
+  - .github
+  - .env*
+  - README.md
+  - PLAN_CAMPING_DEALS_GRATIS.md
+
+# SEO
+author: Camping Deals
+twitter:
+  username: campingdeals
+  card: summary_large_image
+  
+social:
+  name: Camping Deals
+  links:
+    - https://t.me/campingdeals
+    - https://instagram.com/campingdeals
+    - https://tiktok.com/@campingdeals
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+      image: /assets/og-image.png

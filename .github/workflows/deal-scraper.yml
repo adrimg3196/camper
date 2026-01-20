@@ -1,0 +1,125 @@
+# .github/workflows/deal-scraper.yml
+# Pipeline de automatización 100% GRATIS con GitHub Actions
+
+name: 🏕️ Camping Deals Scraper
+
+on:
+  schedule:
+    # Ejecutar cada 6 horas: 00:00, 06:00, 12:00, 18:00 UTC
+    - cron: '0 */6 * * *'
+  
+  # Permite ejecución manual desde GitHub
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Modo dry-run (no guardar cambios)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  # Supabase (base de datos gratuita)
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+  
+  # Amazon Affiliate
+  AMAZON_PARTNER_TAG: ${{ secrets.AMAZON_PARTNER_TAG }}
+  
+  # Telegram Bot
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+  TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+  
+  # Email (Resend)
+  RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+  
+  # IFTTT (Instagram/TikTok)
+  IFTTT_KEY: ${{ secrets.IFTTT_KEY }}
+  
+  # Analytics (Google Sheets)
+  GOOGLE_SHEETS_CREDENTIALS: ${{ secrets.GOOGLE_SHEETS_CREDENTIALS }}
+  GOOGLE_SHEETS_ID: ${{ secrets.GOOGLE_SHEETS_ID }}
+
+jobs:
+  scrape-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: 🔍 Run scraper and publish
+        run: |
+          if [ "${{ github.event.inputs.dry_run }}" == "true" ]; then
+            python main_automation.py --scrape --dry-run
+          else
+            python main_automation.py --scrape
+          fi
+      
+      - name: 📊 Commit updated data
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          
+          # Añadir archivos de datos actualizados
+          git add data/deals.json data/deals_db.json data/analytics_log.json 2>/dev/null || true
+          
+          # Commit solo si hay cambios
+          git diff --staged --quiet || git commit -m "🔄 Update deals $(date +'%Y-%m-%d %H:%M')"
+          git push || true
+      
+      - name: 📤 Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deals-${{ github.run_number }}
+          path: data/
+          retention-days: 7
+
+  # Job separado para el newsletter diario (solo a las 9:00 AM)
+  daily-newsletter:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 9 * * *'
+    needs: scrape-and-publish
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - run: pip install -r requirements.txt
+      
+      - name: 📧 Send daily newsletter
+        run: python main_automation.py --newsletter
+
+  # Health check semanal
+  weekly-health-check:
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 0 * * 0'  # Domingos a medianoche
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - run: pip install -r requirements.txt
+      
+      - name: 🔍 System health check
+        run: python main_automation.py --health

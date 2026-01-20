@@ -1,0 +1,57 @@
+name: Fetch Amazon Deals
+
+on:
+  schedule:
+    # Cada 6 horas: 00:00, 06:00, 12:00, 18:00 UTC
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Permite ejecución manual
+
+env:
+  AMAZON_ACCESS_KEY: ${{ secrets.AMAZON_ACCESS_KEY }}
+  AMAZON_SECRET_KEY: ${{ secrets.AMAZON_SECRET_KEY }}
+  AMAZON_PARTNER_TAG: ${{ secrets.AMAZON_PARTNER_TAG }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+
+jobs:
+  fetch-and-publish:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install paapi5-python-sdk python-telegram-bot
+      
+      - name: Create data directory
+        run: mkdir -p data
+      
+      - name: Fetch Amazon deals
+        run: python scripts/fetch_deals.py
+      
+      - name: Publish to Telegram
+        run: python scripts/telegram_bot.py --publish-new
+      
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: offers-db-${{ github.run_number }}
+          path: data/offers.db
+          retention-days: 7
+      
+      - name: Commit database changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/offers.db || true
+          git diff --staged --quiet || git commit -m "🔄 Update offers database [skip ci]"
+          git push || true

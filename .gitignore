@@ -30,3 +30,4 @@ __pycache__/
 *.log
 tsconfig.tsbuildinfo
 video_temp.mp4
+backend/tiktok_profile/

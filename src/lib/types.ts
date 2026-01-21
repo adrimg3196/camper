@@ -1,19 +1,30 @@
 // Tipos para el sistema de ofertas de Amazon
 
-export interface AmazonProduct {
-    asin: string;
+export interface Product {
+    id?: number | string;
+    asin?: string;
     title: string;
+    marketing_title?: string;
+    marketing_description?: string;
     description?: string;
-    imageUrl: string;
-    category: ProductCategory;
-    originalPrice: number;
-    discountedPrice: number;
-    discountPercentage: number;
-    affiliateUrl: string;
+    image_url: string;
+    imageUrl?: string; // Mantener por compatibilidad si se usa en otros sitios
+    url: string;
+    category: string;
+    price: number;
+    original_price?: number;
+    originalPrice?: number;
+    discountedPrice?: number;
+    discount?: number;
+    discountPercentage?: number;
+    affiliate_url?: string;
+    affiliateUrl?: string;
     rating?: number;
+    review_count?: number;
     reviewCount?: number;
     isPrime?: boolean;
-    lastUpdated: Date;
+    created_at?: string | Date;
+    lastUpdated?: Date;
 }
 
 export type ProductCategory =

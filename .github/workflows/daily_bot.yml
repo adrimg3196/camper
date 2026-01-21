@@ -1,0 +1,41 @@
+name: Zero-Cost TikTok Bot
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Ejecutar cada 6 horas
+  workflow_dispatch: # Permite ejecución manual
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+
+    - name: Install Python dependencies
+      run: |
+        pip install -r backend/requirements.txt
+    
+    - name: Run Automation
+      env:
+        # Secretos configurados en GitHub Repo -> Settings -> Secrets
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
+        HUGGINGFACE_MODEL: ${{ secrets.HUGGINGFACE_MODEL }}
+        AMAZON_PARTNER_TAG: ${{ secrets.AMAZON_PARTNER_TAG }}
+        TIKTOK_COOKIES_JSON: ${{ secrets.TIKTOK_COOKIES_JSON }}
+        CI: true
+      run: |
+        python backend/main.py

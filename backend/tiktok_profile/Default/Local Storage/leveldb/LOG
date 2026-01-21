@@ -1,0 +1,5 @@
+2026/01/21-19:57:36.031 37b794 Reusing MANIFEST /Users/adrian.martinez/Desktop/camper/backend/tiktok_profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/01/21-19:57:36.034 37b794 Recovering log #27
+2026/01/21-19:57:36.035 37b794 Level-0 table #30: started
+2026/01/21-19:57:36.039 37b794 Level-0 table #30: 21312 bytes OK
+2026/01/21-19:57:36.041 37b794 Delete type=0 #27

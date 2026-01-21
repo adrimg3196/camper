@@ -1,0 +1,6 @@
+2026/01/21-11:46:51.145 2d7c3a Creating DB /Users/adrian.martinez/Desktop/camper/backend/tiktok_profile/Default/IndexedDB/https_calendar.google.com_0.indexeddb.leveldb since it was missing.
+2026/01/21-11:46:51.147 2d7c3a Reusing MANIFEST /Users/adrian.martinez/Desktop/camper/backend/tiktok_profile/Default/IndexedDB/https_calendar.google.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/01/21-11:47:04.553 2d7c3c Level-0 table #5: started
+2026/01/21-11:47:04.563 2d7c3c Level-0 table #5: 1540 bytes OK
+2026/01/21-11:47:04.564 2d7c3c Delete type=0 #3
+2026/01/21-11:47:04.564 2d7c3c Manual compaction at level-0 from (begin) .. (end); will stop at (end)

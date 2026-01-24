@@ -22,3 +22,4 @@ const nextConfig = {
 
 module.exports = nextConfig;
 // Force rebuild Fri Jan 23 20:55:59 UTC 2026
+// Refresh 1769251797

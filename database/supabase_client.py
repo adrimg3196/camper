@@ -20,10 +20,11 @@ except ImportError:
 
 class FreeDatabase:
     """Cliente de base de datos gratuito (Supabase o JSON fallback)"""
-    
+
     def __init__(self):
-        self.supabase_url = os.environ.get('SUPABASE_URL')
-        self.supabase_key = os.environ.get('SUPABASE_ANON_KEY')
+        # Soportar ambos nombres de variables de entorno
+        self.supabase_url = os.environ.get('SUPABASE_URL') or os.environ.get('NEXT_PUBLIC_SUPABASE_URL')
+        self.supabase_key = os.environ.get('SUPABASE_ANON_KEY') or os.environ.get('NEXT_PUBLIC_SUPABASE_ANON_KEY')
         self.client: Optional[Client] = None
         
         if HAS_SUPABASE and self.supabase_url and self.supabase_key:
@@ -58,41 +59,42 @@ class FreeDatabase:
             return self._insert_local(deals)
     
     def _insert_supabase(self, deals: List[Dict]) -> int:
-        """Inserta en Supabase"""
+        """Inserta en Supabase - Esquema adaptado a tabla 'deals' existente"""
         inserted = 0
-        
+
         for deal in deals:
             try:
-                # Verificar si existe
-                existing = self.client.table('deals').select('asin').eq('asin', deal['asin']).execute()
-                
+                # Verificar si existe por ASIN
+                existing = self.client.table('deals').select('id,asin').eq('asin', deal['asin']).execute()
+
+                # Mapear datos al esquema de la tabla existente
                 deal_data = {
                     'asin': deal['asin'],
-                    'title': deal['title'],
+                    'title': deal['title'][:200],  # Limitar longitud
+                    'description': f"Descuento del {deal['discount']}% - Precio original: {deal.get('original_price', 0)}€",
+                    'price': deal['current_price'],
                     'image_url': deal.get('image_url'),
-                    'category': deal['category'],
-                    'current_price': deal['current_price'],
-                    'original_price': deal['original_price'],
-                    'discount': deal['discount'],
+                    'url': f"https://www.amazon.es/dp/{deal['asin']}",
                     'affiliate_url': deal['affiliate_url'],
+                    'category': deal['category'],
                     'rating': deal.get('rating'),
                     'review_count': deal.get('review_count'),
-                    'is_prime': deal.get('is_prime', False),
-                    'updated_at': datetime.now().isoformat(),
+                    'is_active': True,
                 }
-                
+
                 if existing.data:
-                    # Update
+                    # Update existente
                     self.client.table('deals').update(deal_data).eq('asin', deal['asin']).execute()
+                    print(f"  📝 Actualizado: {deal['title'][:40]}...")
                 else:
-                    # Insert
-                    deal_data['created_at'] = datetime.now().isoformat()
+                    # Insert nuevo
                     self.client.table('deals').insert(deal_data).execute()
                     inserted += 1
-                    
+                    print(f"  ✅ Insertado: {deal['title'][:40]}...")
+
             except Exception as e:
                 print(f"⚠️ Error insertando {deal['asin']}: {e}")
-        
+
         print(f"💾 Supabase: {inserted} nuevas ofertas insertadas")
         return inserted
     

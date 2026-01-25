@@ -27,8 +27,47 @@ export default function ProductCard({ product }: ProductCardProps) {
         finalUrl = `${finalUrl}${connector}tag=${partnerTag}`;
     }
 
+    // Schema.org Product JSON-LD para Rich Snippets
+    const productSchema = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": product.marketing_title || product.title,
+        "description": `${product.marketing_title || product.title} - Oferta con ${discount}% de descuento`,
+        "image": imageUrl,
+        "brand": {
+            "@type": "Brand",
+            "name": product.category.replace(/-/g, ' ')
+        },
+        "sku": product.id,
+        "offers": {
+            "@type": "Offer",
+            "url": finalUrl,
+            "priceCurrency": "EUR",
+            "price": price.toFixed(2),
+            "priceValidUntil": new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            "availability": "https://schema.org/InStock",
+            "seller": {
+                "@type": "Organization",
+                "name": "Amazon España"
+            }
+        },
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": rating.toFixed(1),
+            "bestRating": "5",
+            "worstRating": "1",
+            "reviewCount": reviewCount || 1
+        }
+    };
+
     return (
         <article className="product-card group relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 rounded-2xl overflow-hidden border border-slate-700/50 hover:border-green-500/30">
+            {/* Schema.org JSON-LD para SEO Rich Snippets */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+            />
+
             {/* Discount badge */}
             <div className="absolute top-3 left-3 z-10">
                 <span className="discount-badge inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg">

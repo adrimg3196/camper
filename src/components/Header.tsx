@@ -24,11 +24,11 @@ export default function Header() {
                             <div className="absolute -right-1 -top-1 w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
                         </div>
                         <div className="hidden sm:block">
-                            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
-                                <span className="text-gradient">Camper</span>
+                            <span className="text-xl md:text-2xl font-bold tracking-tight">
+                                <span className="text-gradient">Camping</span>
                                 <span className="text-white">Deals</span>
-                            </h1>
-                            <p className="text-[10px] text-slate-400 -mt-0.5 tracking-wide">Ofertas +30% descuento</p>
+                            </span>
+                            <p className="text-[10px] text-slate-400 -mt-0.5 tracking-wide">Ofertas Camping España</p>
                         </div>
                     </Link>
 

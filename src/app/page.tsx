@@ -5,9 +5,19 @@ import StatCard from '@/components/StatCard';
 import { getProducts } from '@/lib/deals';
 import { CATEGORIES } from '@/lib/types';
 import Link from 'next/link';
+import { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 3600; // Revalidate every hour for better performance
+
+// SEO específico para página principal
+export const metadata: Metadata = {
+    title: "Ofertas Camping 2026 | Chollos Amazon +30% Descuento | CampingDeals España",
+    description: "🏕️ Las MEJORES ofertas de camping 2026 con +30% descuento. Tiendas de campaña, sacos de dormir, mochilas trekking baratas. ✓ Actualizado diariamente ✓ Envío Prime ✓ Precios más bajos garantizados en Amazon España.",
+    alternates: {
+        canonical: "https://ofertascamping.es",
+    },
+};
 
 export default async function Home() {
     const products = await getProducts();
@@ -20,8 +30,8 @@ export default async function Home() {
     const jsonLd = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": "Ofertas de Camping y Outdoor - Camper Deals",
-        "description": "Las mejores ofertas de camping y outdoor con más del 30% de descuento",
+        "name": "Ofertas de Camping 2026 - CampingDeals España",
+        "description": "Las mejores ofertas de camping y outdoor con más del 30% de descuento en Amazon España",
         "numberOfItems": products.length,
         "itemListElement": products.slice(0, 10).map((product, index) => ({
             "@type": "ListItem",
@@ -52,10 +62,10 @@ export default async function Home() {
     const organizationSchema = {
         "@context": "https://schema.org",
         "@type": "Organization",
-        "name": "Camper Deals",
-        "url": "https://camperdeals.es",
-        "logo": "https://camperdeals.es/logo.png",
-        "description": "Las mejores ofertas de camping y outdoor con más del 30% de descuento en Amazon"
+        "name": "CampingDeals España",
+        "url": "https://ofertascamping.es",
+        "logo": "https://ofertascamping.es/logo.png",
+        "description": "Las mejores ofertas de camping y outdoor con más del 30% de descuento en Amazon España"
     };
 
     return (
@@ -84,14 +94,14 @@ export default async function Home() {
                             Ofertas Actualizadas
                         </span>
                         <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight tracking-tight">
-                            Tu próxima aventura
+                            Ofertas Camping 2026
                             <br />
-                            <span className="text-gradient-warm">empieza aquí</span>
+                            <span className="text-gradient-warm">+30% Descuento</span>
                         </h1>
                         <p className="text-lg sm:text-xl md:text-2xl text-slate-300 mb-8 font-light max-w-2xl mx-auto leading-relaxed">
-                            Equipamiento premium con descuentos de hasta el <strong className="text-white">70%</strong>.
+                            Las <strong className="text-white">mejores ofertas de camping</strong> en Amazon España.
                             <br className="hidden sm:block" />
-                            <span className="text-slate-400">Seleccionado por expertos, actualizado diariamente.</span>
+                            <span className="text-slate-400">Tiendas de campaña, sacos de dormir y mochilas baratas.</span>
                         </p>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -176,6 +186,39 @@ export default async function Home() {
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>
                                 Unirse al canal
                             </a>
+                        </div>
+                    </div>
+                </section>
+
+                {/* SEO CONTENT SECTION - Keywords optimization */}
+                <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
+                    <div className="bg-slate-800/30 rounded-3xl border border-slate-700/50 p-8 sm:p-12">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6">
+                            Las Mejores Ofertas de Camping en España 2026
+                        </h2>
+
+                        <div className="prose prose-invert max-w-none text-slate-300 space-y-6">
+                            <p>
+                                Bienvenido a <strong className="text-white">CampingDeals España</strong>, tu portal de <strong className="text-green-400">ofertas de camping</strong> con los mejores descuentos de Amazon. Encontramos diariamente <strong className="text-white">chollos en tiendas de campaña</strong>, <strong className="text-white">sacos de dormir baratos</strong>, <strong className="text-white">mochilas de trekking</strong> y todo el equipamiento outdoor que necesitas para tus aventuras.
+                            </p>
+
+                            <h3 className="text-xl font-semibold text-white mt-8 mb-4">¿Por qué elegir nuestras ofertas de camping?</h3>
+                            <ul className="list-disc list-inside space-y-2 text-slate-400">
+                                <li><strong className="text-white">Descuentos mínimos del 30%</strong> - Solo mostramos ofertas reales con descuentos significativos</li>
+                                <li><strong className="text-white">Actualización diaria</strong> - Escaneamos Amazon cada día para encontrar las mejores ofertas</li>
+                                <li><strong className="text-white">Envío Prime</strong> - La mayoría de productos con envío rápido y gratuito</li>
+                                <li><strong className="text-white">Productos verificados</strong> - Solo marcas de confianza con buenas valoraciones</li>
+                            </ul>
+
+                            <h3 className="text-xl font-semibold text-white mt-8 mb-4">Categorías de Ofertas Camping</h3>
+                            <p>
+                                Explora nuestras categorías de <strong className="text-green-400">material de camping barato</strong>: <Link href="/ofertas/tiendas-campana" className="text-green-400 hover:underline">tiendas de campaña</Link>, <Link href="/ofertas/sacos-dormir" className="text-green-400 hover:underline">sacos de dormir</Link>, <Link href="/ofertas/mochilas" className="text-green-400 hover:underline">mochilas de senderismo</Link>, <Link href="/ofertas/cocina-camping" className="text-green-400 hover:underline">cocina camping</Link>, <Link href="/ofertas/iluminacion" className="text-green-400 hover:underline">linternas y frontales</Link>, y mucho más. Cada categoría está optimizada para ayudarte a encontrar el mejor precio en equipamiento outdoor.
+                            </p>
+
+                            <h3 className="text-xl font-semibold text-white mt-8 mb-4">Ofertas Especiales: Black Friday y Prime Day</h3>
+                            <p>
+                                Durante eventos como <strong className="text-white">Black Friday camping</strong> y <strong className="text-white">Amazon Prime Day</strong>, los descuentos pueden llegar hasta el 70%. Suscríbete a nuestro canal de Telegram para recibir alertas instantáneas cuando detectemos <strong className="text-green-400">chollos de camping</strong> especiales.
+                            </p>
                         </div>
                     </div>
                 </section>

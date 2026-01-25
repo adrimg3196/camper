@@ -12,10 +12,10 @@ export default function Footer() {
                     <div className="col-span-2 md:col-span-1">
                         <Link href="/" className="flex items-center gap-2 group">
                             <span className="text-3xl group-hover:scale-110 transition-transform">🏕️</span>
-                            <h2 className="text-xl font-bold text-white">Camper Deals</h2>
+                            <span className="text-xl font-bold text-white">CampingDeals España</span>
                         </Link>
                         <p className="mt-4 text-sm text-slate-400 leading-relaxed">
-                            Las mejores ofertas de camping y outdoor con más del 30% de descuento en Amazon.
+                            Las mejores ofertas de camping, tiendas de campaña baratas, sacos de dormir y mochilas con más del 30% de descuento en Amazon España.
                         </p>
                         {/* Social icons */}
                         <div className="flex gap-3 mt-6">
@@ -63,7 +63,7 @@ export default function Footer() {
                 {/* Divider + Legal */}
                 <div className="mt-12 pt-8 border-t border-slate-800">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <p className="text-xs text-slate-500">© {currentYear} Camper Deals. Todos los derechos reservados.</p>
+                        <p className="text-xs text-slate-500">© {currentYear} CampingDeals España (ofertascamping.es). Todos los derechos reservados.</p>
                         <p className="text-xs text-slate-500 md:text-right max-w-lg">
                             <strong className="text-slate-400">Aviso:</strong> Como Afiliado de Amazon, obtenemos ingresos por las compras adscritas que cumplen los requisitos aplicables. Los precios pueden cambiar.
                         </p>

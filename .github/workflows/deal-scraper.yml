@@ -58,6 +58,8 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
+          # Instalar playwright y browsers (opcional para sitios JS-heavy)
+          # pip install playwright && playwright install chromium
       
       - name: 🔍 Run scraper and publish
         run: |

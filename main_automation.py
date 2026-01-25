@@ -13,6 +13,13 @@ from datetime import datetime
 # Añadir el directorio raíz al path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Importar scraper mejorado si está disponible
+try:
+    from scraper.enhanced_scraper import MultiSourceScraper, AmazonScraper
+    HAS_ENHANCED_SCRAPER = True
+except ImportError:
+    HAS_ENHANCED_SCRAPER = False
+
 from scraper.amazon_scraper import FreeAmazonScraper
 from database.supabase_client import FreeDatabase
 from marketing.email_sender import FreeEmailMarketing
@@ -23,12 +30,21 @@ from analytics.dashboard import FreeDashboard, MonitoringSystem
 class CampingDealsBot:
     """Bot principal de automatización - 100% gratuito"""
     
-    def __init__(self):
+    def __init__(self, use_enhanced: bool = True):
         print("🏕️ Inicializando Camping Deals Bot...")
         print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M')}")
         print("-" * 50)
-        
-        self.scraper = FreeAmazonScraper()
+
+        # Usar scraper mejorado si está disponible
+        if use_enhanced and HAS_ENHANCED_SCRAPER:
+            print("✅ Usando Enhanced Multi-Source Scraper")
+            self.multi_scraper = MultiSourceScraper(sources=['amazon'])
+            self.scraper = None
+        else:
+            print("📌 Usando scraper básico")
+            self.scraper = FreeAmazonScraper()
+            self.multi_scraper = None
+
         self.db = FreeDatabase()
         self.email = FreeEmailMarketing()
         self.social = FreeSocialPoster()
@@ -46,9 +62,14 @@ class CampingDealsBot:
         }
         
         try:
-            # 1. Scrapear Amazon
-            print("\n🔍 PASO 1: Scrapeando Amazon...")
-            deals = self.scraper.scrape_all_categories()
+            # 1. Scrapear ofertas (Enhanced o básico)
+            print("\n🔍 PASO 1: Scrapeando ofertas...")
+            if self.multi_scraper:
+                deal_objects = self.multi_scraper.scrape_all(max_pages=2)
+                # Convertir a formato compatible
+                deals = [d.to_supabase_format() for d in deal_objects]
+            else:
+                deals = self.scraper.scrape_all_categories()
             results['deals_scraped'] = len(deals)
             
             if not deals:
@@ -65,7 +86,10 @@ class CampingDealsBot:
             # 3. Actualizar JSON para GitHub Pages
             print("\n📄 PASO 3: Actualizando JSON para web...")
             if not dry_run:
-                self.scraper.save_deals_json(deals, 'data/deals.json')
+                if self.multi_scraper:
+                    self.multi_scraper.save_to_json(deal_objects, 'data/deals.json')
+                else:
+                    self.scraper.save_deals_json(deals, 'data/deals.json')
             
             # 4. Publicar en redes sociales (top 3 ofertas)
             print("\n📱 PASO 4: Publicando en redes sociales...")

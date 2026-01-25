@@ -1,11 +1,21 @@
 # Camping Deals - Dependencias Python
 # 100% gratuitas y open source
 
-# Web Scraping
+# Web Scraping - Core
 requests>=2.31.0
 beautifulsoup4>=4.12.0
 fake-useragent>=1.4.0
 lxml>=5.0.0
+
+# Web Scraping - Advanced (Opcional)
+# Scrapy para scraping a gran escala
+scrapy>=2.11.0
+# Playwright para sitios con JavaScript pesado
+# playwright>=1.40.0
+
+# Anti-detección
+scrapy-fake-useragent>=1.4.4
+scrapy-rotating-proxies>=0.6.2
 
 # Base de datos (Supabase es opcional)
 supabase>=2.3.0

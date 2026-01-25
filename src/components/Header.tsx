@@ -34,6 +34,14 @@ export default function Header() {
 
                     {/* Desktop Nav */}
                     <nav className="hidden md:flex items-center gap-8">
+                        <Link href="/blog" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
+                            Blog
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300" />
+                        </Link>
+                        <Link href="/ofertas/tiendas-campana" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
+                            Tiendas
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300" />
+                        </Link>
                         <Link href="/#ofertas" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
                             Ofertas
                             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300" />

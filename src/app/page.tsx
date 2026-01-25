@@ -190,6 +190,52 @@ export default async function Home() {
                     </div>
                 </section>
 
+                {/* LATEST ARTICLES SECTION */}
+                <section className="max-w-7xl mx-auto px-4 sm:px-6 mb-20">
+                    <div className="flex items-center justify-between mb-8">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-white">Consejos de Expertos</h2>
+                        <Link href="/blog" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
+                            Ver todos los artículos →
+                        </Link>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* We import BLOG_POSTS dynamically or fetch them if this was a server component fetching from DB. 
+                             For now, hardcoding a preview of the first 3 posts relative to the data file we just made. 
+                             Ideally we would import { BLOG_POSTS } from '@/data/blog-posts' at top level.
+                          */}
+                        <Link href="/blog/mejores-tiendas-campana-2026" className="group block bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700/50 hover:border-blue-500/50 transition-all">
+                            <div className="h-48 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&q=80&w=800" alt="Tiendas Campaña" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            </div>
+                            <div className="p-5">
+                                <span className="text-xs text-blue-400 font-semibold mb-2 block">EQUIPAMIENTO</span>
+                                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">Las 7 Mejores Tiendas de Campaña de 2026</h3>
+                                <p className="text-sm text-slate-400 line-clamp-2">Hemos probado más de 50 modelos en condiciones extremas...</p>
+                            </div>
+                        </Link>
+                        <Link href="/blog/guia-definitiva-sacos-dormir" className="group block bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700/50 hover:border-blue-500/50 transition-all">
+                            <div className="h-48 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1517175782509-deef2807f66e?auto=format&fit=crop&q=80&w=800" alt="Sacos Dormir" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            </div>
+                            <div className="p-5">
+                                <span className="text-xs text-blue-400 font-semibold mb-2 block">GUÍAS TÉCNICAS</span>
+                                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">Guía Definitiva de Sacos de Dormir</h3>
+                                <p className="text-sm text-slate-400 line-clamp-2">¿Plumas o fibra? Desmitificamos la elección del saco...</p>
+                            </div>
+                        </Link>
+                        <Link href="/blog/trucos-camping-principiantes" className="group block bg-slate-800/50 rounded-xl overflow-hidden border border-slate-700/50 hover:border-blue-500/50 transition-all">
+                            <div className="h-48 overflow-hidden">
+                                <img src="https://images.unsplash.com/photo-1523987355523-c7b5b0dd90a7?auto=format&fit=crop&q=80&w=800" alt="Trucos Camping" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                            </div>
+                            <div className="p-5">
+                                <span className="text-xs text-blue-400 font-semibold mb-2 block">CONSEJOS</span>
+                                <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-400 transition-colors">10 Errores de Novato (y cómo evitarlos)</h3>
+                                <p className="text-sm text-slate-400 line-clamp-2">Aprende de los errores de otros para garantizar tu éxito...</p>
+                            </div>
+                        </Link>
+                    </div>
+                </section>
+
                 {/* SEO CONTENT SECTION - Keywords optimization */}
                 <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-20">
                     <div className="bg-slate-800/30 rounded-3xl border border-slate-700/50 p-8 sm:p-12">

@@ -8,13 +8,5 @@
       "path": "/api/cron/scrape-deals",
       "schedule": "0 7 * * *"
     }
-  ],
-  "functions": {
-    "api/cron/**/*.ts": {
-      "maxDuration": 60
-    },
-    "api/marketing/generate/*.ts": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }

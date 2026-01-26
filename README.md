@@ -66,9 +66,11 @@ cp .env.example .env
 Edita `.env` con tus credenciales (ver guía en `.env.example`):
 
 - **Amazon Associate**: [affiliate-program.amazon.es](https://affiliate-program.amazon.es/)
-- **Telegram Bot**: @BotFather
+- **Telegram Bot**: 📖 **Guía completa**: Ver [`GUIA_TELEGRAM_BOT.md`](./GUIA_TELEGRAM_BOT.md) o seguir pasos en @BotFather
 - **Supabase** (opcional): [supabase.com](https://supabase.com/)
 - **Resend** (opcional): [resend.com](https://resend.com/)
+
+> **💡 Para Next.js/Vercel**: El proyecto incluye un dashboard completo en `/dashboard` con verificación de estado en tiempo real. Ver [`claude_sigue.md`](./claude_sigue.md) para el estado actual del proyecto.
 
 ### 3. Ejecutar scraping
 

@@ -1,17 +1,31 @@
 import { NextResponse } from 'next/server';
 import { generateMarketingContent } from '@/lib/gemini';
+import { generateMarketingContentAdvanced } from '@/lib/openrouter';
 import { generateVideo } from '@/lib/video';
 import path from 'path';
 import fs from 'fs';
 
 export async function POST(request: Request) {
     const body = await request.json();
-    const { topic, productUrl, platform } = body;
+    const { topic, productUrl, platform, productData, useOpenRouter } = body;
 
     try {
-        // Try to use real Gemini API
+        // Priorizar OpenRouter si está configurado (mejor calidad)
         let data;
-        if (process.env.GOOGLE_API_KEY) {
+        if (useOpenRouter !== false && process.env.OPENROUTER_API_KEY) {
+            try {
+                data = await generateMarketingContentAdvanced(topic, productUrl, productData);
+            } catch (openRouterError) {
+                console.error('OpenRouter failed:', openRouterError);
+                // Fallback a Gemini
+                if (process.env.GOOGLE_API_KEY) {
+                    console.log('Falling back to Gemini...');
+                    data = await generateMarketingContent(topic, productUrl);
+                } else {
+                    throw new Error(`No AI provider configured. OpenRouter error: ${openRouterError instanceof Error ? openRouterError.message : String(openRouterError)}`);
+                }
+            }
+        } else if (process.env.GOOGLE_API_KEY) {
             data = await generateMarketingContent(topic, productUrl);
         } else {
             // Fallback to mock if no key provided (for demo/testing)

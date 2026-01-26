@@ -314,6 +314,14 @@ export default function RootLayout({
                         gtag('config', 'G-NEJH6DH78L');
                     `}
                 </Script>
+
+                {/* Google AdSense - ofertascamping.es */}
+                <Script
+                    async
+                    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7131240786023090"
+                    crossOrigin="anonymous"
+                    strategy="afterInteractive"
+                />
             </body>
         </html>
     );

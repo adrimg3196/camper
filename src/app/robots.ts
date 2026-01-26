@@ -1,7 +1,8 @@
 import { MetadataRoute } from 'next';
+import { getSiteUrl } from '@/lib/config';
 
 export default function robots(): MetadataRoute.Robots {
-    const baseUrl = 'https://ofertascamping.es';
+    const baseUrl = getSiteUrl();
 
     return {
         rules: [

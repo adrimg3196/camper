@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
+import { getSiteUrl } from "@/lib/config";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -68,7 +69,7 @@ export const metadata: Metadata = {
     openGraph: {
         title: "🏕️ Ofertas Camping +30% Descuento | CampingDeals España",
         description: "Las mejores ofertas de camping y outdoor con más del 30% de descuento. Tiendas, sacos, mochilas y más. Actualizado diariamente.",
-        url: "https://ofertascamping.es",
+        url: process.env.NEXT_PUBLIC_SITE_URL || "https://camper-omega.vercel.app",
         siteName: "CampingDeals España",
         images: [
             {
@@ -101,10 +102,10 @@ export const metadata: Metadata = {
 
     // Alternates para idiomas y canonical
     alternates: {
-        canonical: "https://ofertascamping.es",
+        canonical: process.env.NEXT_PUBLIC_SITE_URL || "https://camper-omega.vercel.app",
         languages: {
-            "es-ES": "https://ofertascamping.es",
-            "es": "https://ofertascamping.es",
+            "es-ES": process.env.NEXT_PUBLIC_SITE_URL || "https://camper-omega.vercel.app",
+            "es": process.env.NEXT_PUBLIC_SITE_URL || "https://camper-omega.vercel.app",
         },
     },
 
@@ -144,94 +145,96 @@ export const viewport: Viewport = {
     colorScheme: "dark",
 };
 
-// Schema.org JSON-LD para Rich Snippets
-const jsonLd = {
-    "@context": "https://schema.org",
-    "@graph": [
-        // Organization Schema
-        {
-            "@type": "Organization",
-            "@id": "https://ofertascamping.es/#organization",
-            "name": "CampingDeals España",
-            "url": "https://ofertascamping.es",
-            "logo": {
-                "@type": "ImageObject",
-                "url": "https://ofertascamping.es/logo.png",
-                "width": 512,
-                "height": 512
-            },
-            "description": "Las mejores ofertas de camping y outdoor con más del 30% de descuento",
-            "sameAs": [
-                "https://twitter.com/campingdeals_es",
-                "https://facebook.com/campingdeals.es",
-                "https://instagram.com/campingdeals_es"
-            ],
-            "contactPoint": {
-                "@type": "ContactPoint",
-                "contactType": "customer service",
-                "availableLanguage": ["Spanish"]
-            }
-        },
-        // WebSite Schema con SearchAction
-        {
-            "@type": "WebSite",
-            "@id": "https://ofertascamping.es/#website",
-            "url": "https://ofertascamping.es",
-            "name": "CampingDeals España - Ofertas Camping",
-            "description": "Encuentra las mejores ofertas de camping con descuentos de más del 30%",
-            "publisher": { "@id": "https://ofertascamping.es/#organization" },
-            "inLanguage": "es-ES",
-            "potentialAction": {
-                "@type": "SearchAction",
-                "target": {
-                    "@type": "EntryPoint",
-                    "urlTemplate": "https://ofertascamping.es/buscar?q={search_term_string}"
+// Schema.org JSON-LD para Rich Snippets (se genera dinámicamente)
+function getJsonLd() {
+    const siteUrl = getSiteUrl();
+    return {
+        "@context": "https://schema.org",
+        "@graph": [
+            // Organization Schema
+            {
+                "@type": "Organization",
+                "@id": `${siteUrl}/#organization`,
+                "name": "CampingDeals España",
+                "url": siteUrl,
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": `${siteUrl}/logo.png`,
+                    "width": 512,
+                    "height": 512
                 },
-                "query-input": "required name=search_term_string"
-            }
-        },
-        // WebPage Schema
-        {
-            "@type": "WebPage",
-            "@id": "https://ofertascamping.es/#webpage",
-            "url": "https://ofertascamping.es",
-            "name": "Ofertas Camping 2026 | Chollos +30% Descuento",
-            "isPartOf": { "@id": "https://ofertascamping.es/#website" },
-            "about": { "@id": "https://ofertascamping.es/#organization" },
-            "description": "Las mejores ofertas de camping con más del 30% de descuento",
-            "inLanguage": "es-ES",
-            "datePublished": "2024-01-01",
-            "dateModified": new Date().toISOString().split('T')[0],
-            "breadcrumb": { "@id": "https://ofertascamping.es/#breadcrumb" }
-        },
-        // BreadcrumbList Schema
-        {
-            "@type": "BreadcrumbList",
-            "@id": "https://ofertascamping.es/#breadcrumb",
-            "itemListElement": [
-                {
-                    "@type": "ListItem",
-                    "position": 1,
-                    "name": "Inicio",
-                    "item": "https://ofertascamping.es"
-                },
-                {
-                    "@type": "ListItem",
-                    "position": 2,
-                    "name": "Ofertas del Día",
-                    "item": "https://ofertascamping.es/#ofertas"
+                "description": "Las mejores ofertas de camping y outdoor con más del 30% de descuento",
+                "sameAs": [
+                    "https://twitter.com/campingdeals_es",
+                    "https://facebook.com/campingdeals.es",
+                    "https://instagram.com/campingdeals_es"
+                ],
+                "contactPoint": {
+                    "@type": "ContactPoint",
+                    "contactType": "customer service",
+                    "availableLanguage": ["Spanish"]
                 }
-            ]
-        },
-        // ItemList Schema para productos (Rich Snippets de productos)
-        {
-            "@type": "ItemList",
-            "@id": "https://ofertascamping.es/#productlist",
-            "name": "Ofertas de Camping Destacadas",
-            "description": "Las mejores ofertas de equipamiento de camping con descuentos superiores al 30%",
-            "numberOfItems": 4,
-            "itemListOrder": "https://schema.org/ItemListOrderDescending"
-        },
+            },
+            // WebSite Schema con SearchAction
+            {
+                "@type": "WebSite",
+                "@id": `${siteUrl}/#website`,
+                "url": siteUrl,
+                "name": "CampingDeals España - Ofertas Camping",
+                "description": "Encuentra las mejores ofertas de camping con descuentos de más del 30%",
+                "publisher": { "@id": `${siteUrl}/#organization` },
+                "inLanguage": "es-ES",
+                "potentialAction": {
+                    "@type": "SearchAction",
+                    "target": {
+                        "@type": "EntryPoint",
+                        "urlTemplate": `${siteUrl}/buscar?q={search_term_string}`
+                    },
+                    "query-input": "required name=search_term_string"
+                }
+            },
+            // WebPage Schema
+            {
+                "@type": "WebPage",
+                "@id": `${siteUrl}/#webpage`,
+                "url": siteUrl,
+                "name": "Ofertas Camping 2026 | Chollos +30% Descuento",
+                "isPartOf": { "@id": `${siteUrl}/#website` },
+                "about": { "@id": `${siteUrl}/#organization` },
+                "description": "Las mejores ofertas de camping con más del 30% de descuento",
+                "inLanguage": "es-ES",
+                "datePublished": "2024-01-01",
+                "dateModified": new Date().toISOString().split('T')[0],
+                "breadcrumb": { "@id": `${siteUrl}/#breadcrumb` }
+            },
+            // BreadcrumbList Schema
+            {
+                "@type": "BreadcrumbList",
+                "@id": `${siteUrl}/#breadcrumb`,
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "name": "Inicio",
+                        "item": siteUrl
+                    },
+                    {
+                        "@type": "ListItem",
+                        "position": 2,
+                        "name": "Ofertas del Día",
+                        "item": `${siteUrl}/#ofertas`
+                    }
+                ]
+            },
+            // ItemList Schema para productos (Rich Snippets de productos)
+            {
+                "@type": "ItemList",
+                "@id": `${siteUrl}/#productlist`,
+                "name": "Ofertas de Camping Destacadas",
+                "description": "Las mejores ofertas de equipamiento de camping con descuentos superiores al 30%",
+                "numberOfItems": 4,
+                "itemListOrder": "https://schema.org/ItemListOrderDescending"
+            },
         // FAQPage Schema
         {
             "@type": "FAQPage",
@@ -291,7 +294,7 @@ export default function RootLayout({
                 {/* Schema.org JSON-LD */}
                 <script
                     type="application/ld+json"
-                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(getJsonLd()) }}
                 />
             </head>
             <body className={`${inter.className} antialiased min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`}>

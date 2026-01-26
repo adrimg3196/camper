@@ -56,7 +56,7 @@ export default function BlogPostPage({ params }: Props) {
         "author": [{
             "@type": "Person",
             "name": post.author,
-            "url": "https://ofertascamping.es/blog"
+            "url": `${process.env.NEXT_PUBLIC_SITE_URL || 'https://camper-omega.vercel.app'}/blog`
         }],
         "publisher": {
             "@type": "Organization",

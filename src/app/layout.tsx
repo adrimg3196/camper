@@ -301,9 +301,9 @@ export default function RootLayout({
             <body className={`${inter.className} antialiased min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`}>
                 {children}
 
-                {/* Google Analytics 4 - Reemplazar con tu ID */}
+                {/* Google Analytics 4 - ofertascamping.es */}
                 <Script
-                    src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"
+                    src="https://www.googletagmanager.com/gtag/js?id=G-NEJH6DH78L"
                     strategy="afterInteractive"
                 />
                 <Script id="google-analytics" strategy="afterInteractive">
@@ -311,7 +311,7 @@ export default function RootLayout({
                         window.dataLayer = window.dataLayer || [];
                         function gtag(){dataLayer.push(arguments);}
                         gtag('js', new Date());
-                        gtag('config', 'G-XXXXXXXXXX');
+                        gtag('config', 'G-NEJH6DH78L');
                     `}
                 </Script>
             </body>

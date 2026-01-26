@@ -47,16 +47,6 @@ export async function POST(request: Request) {
             );
             content = fullContent.tiktokshop;
         } else {
-            // Fallback a Gemini
-            const fullContent = await generateMarketingContent(productTitle, productUrl);
-            // Adaptar formato de Gemini a TikTok Shop
-            content = {
-                title: productTitle.slice(0, 60),
-                description: fullContent.telegram.content.replace(/\*\*/g, '').slice(0, 500),
-                tags: ['camping', 'ofertas', 'descuento', 'outdoor', 'amazon'],
-                cta: '¡Compra ahora con enlace en bio! 🔗',
-            };
-        } else {
             return NextResponse.json(
                 { error: 'No AI provider configured. Set OPENROUTER_API_KEY or GOOGLE_API_KEY' },
                 { status: 500 }

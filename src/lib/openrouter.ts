@@ -40,6 +40,13 @@ export const MODELS = {
         claude: 'anthropic/claude-3.5-sonnet',
         gemini: 'google/gemini-pro',
     },
+    // Gratuitos - Modelos sin costo
+    FREE: {
+        llama: 'meta-llama/llama-3-8b-instruct:free',
+        mistral: 'mistralai/mistral-7b-instruct:free',
+        gemma: 'google/gemma-7b-it:free',
+        qwen: 'qwen/qwen-2-7b-instruct:free',
+    },
     // Económico - Generación masiva
     ECONOMY: {
         gpt: 'openai/gpt-3.5-turbo',
@@ -74,13 +81,14 @@ export async function generateWithOpenRouter(
         throw new Error('OPENROUTER_API_KEY is not configured');
     }
 
-    // Seleccionar modelo
+    // Seleccionar modelo - Priorizar gratuitos si no se especifica
     let model = options.model;
     if (!model && options.useBestModel) {
-        model = MODELS.PREMIUM.claude; // Claude 3.5 Sonnet para mejor calidad
+        // Intentar primero con modelo gratuito
+        model = MODELS.FREE.llama; // Llama 3.8B gratuito
     }
     if (!model) {
-        model = MODELS.BALANCED.claude; // Default balanceado
+        model = MODELS.FREE.llama; // Default: modelo gratuito
     }
 
     try {

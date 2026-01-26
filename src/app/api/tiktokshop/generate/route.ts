@@ -12,16 +12,41 @@ export async function POST(request: Request) {
     try {
         let content;
 
-        // Usar OpenRouter si está disponible (mejor calidad)
-        if (process.env.OPENROUTER_API_KEY) {
+        // Priorizar Gemini (gratuito) o usar OpenRouter con modelos gratuitos
+        if (process.env.GOOGLE_API_KEY) {
+            try {
+                const fullContent = await generateMarketingContent(productTitle, productUrl);
+                // Adaptar formato de Gemini a TikTok Shop
+                content = {
+                    title: productTitle.slice(0, 60),
+                    description: fullContent.telegram.content.replace(/\*\*/g, '').slice(0, 500),
+                    tags: ['camping', 'ofertas', 'descuento', 'outdoor', 'amazon'],
+                    cta: '¡Compra ahora con enlace en bio! 🔗',
+                };
+            } catch (geminiError) {
+                // Fallback a OpenRouter con modelos gratuitos
+                if (process.env.OPENROUTER_API_KEY) {
+                    const fullContent = await generateMarketingContentAdvanced(
+                        productTitle,
+                        productUrl,
+                        productData,
+                        { useBestModel: false } // Usar modelos gratuitos
+                    );
+                    content = fullContent.tiktokshop;
+                } else {
+                    throw geminiError;
+                }
+            }
+        } else if (process.env.OPENROUTER_API_KEY) {
+            // Si no hay Gemini, usar OpenRouter con modelos gratuitos
             const fullContent = await generateMarketingContentAdvanced(
                 productTitle,
                 productUrl,
                 productData,
-                { useBestModel: true }
+                { useBestModel: false } // Usar modelos gratuitos
             );
             content = fullContent.tiktokshop;
-        } else if (process.env.GOOGLE_API_KEY) {
+        } else {
             // Fallback a Gemini
             const fullContent = await generateMarketingContent(productTitle, productUrl);
             // Adaptar formato de Gemini a TikTok Shop

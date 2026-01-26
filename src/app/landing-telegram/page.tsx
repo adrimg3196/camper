@@ -68,7 +68,7 @@ export default function TelegramLandingPage() {
                         </ul>
                     </div>
                     <a
-                        href="https://t.me/camperdeals"
+                        href="https://t.me/camper_deals_bot"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-block bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-xl transition-colors"

@@ -266,7 +266,8 @@ function getJsonLd() {
             ]
         }
     ]
-};
+    };
+}
 
 export default function RootLayout({
     children,

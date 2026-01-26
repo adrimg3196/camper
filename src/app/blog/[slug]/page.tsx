@@ -63,7 +63,7 @@ export default function BlogPostPage({ params }: Props) {
             "name": "CampingDeals España",
             "logo": {
                 "@type": "ImageObject",
-                "url": "https://ofertascamping.es/logo.png"
+                "url": `${process.env.NEXT_PUBLIC_SITE_URL || 'https://camper-omega.vercel.app'}/logo.png`
             }
         },
         "description": post.excerpt

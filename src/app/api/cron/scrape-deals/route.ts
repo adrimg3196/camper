@@ -1,0 +1,204 @@
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
+
+// Verificar que es una llamada de CRON legítima
+function isValidCronRequest(request: Request): boolean {
+    const authHeader = request.headers.get('authorization');
+    if (process.env.NODE_ENV === 'development') return true;
+    return authHeader === `Bearer ${process.env.CRON_SECRET}`;
+}
+
+// Datos de ejemplo para cuando no hay scraper real
+// En producción, esto se reemplaza por llamada al scraper Python o API externa
+const SAMPLE_CAMPING_DEALS = [
+    {
+        asin: 'B09SAMPLE01',
+        title: 'Tienda de Campaña Coleman 4 Personas - Impermeable 3000mm',
+        description: 'Tienda familiar con tecnología WeatherTec. Montaje en 10 minutos.',
+        price: 89.99,
+        original_price: 149.99,
+        discount: 40,
+        image_url: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=400',
+        url: 'https://www.amazon.es/dp/B09SAMPLE01',
+        affiliate_url: 'https://www.amazon.es/dp/B09SAMPLE01?tag=camperdeals07-21',
+        category: 'tiendas-campana',
+        rating: 4.5,
+        review_count: 234,
+        is_active: true,
+    },
+    {
+        asin: 'B09SAMPLE02',
+        title: 'Saco de Dormir Mammut -15C - Pluma de Ganso',
+        description: 'Saco profesional para montaña. Relleno 90/10 pluma.',
+        price: 129.00,
+        original_price: 219.00,
+        discount: 41,
+        image_url: 'https://images.unsplash.com/photo-1510312305653-8ed496efae75?w=400',
+        url: 'https://www.amazon.es/dp/B09SAMPLE02',
+        affiliate_url: 'https://www.amazon.es/dp/B09SAMPLE02?tag=camperdeals07-21',
+        category: 'sacos-dormir',
+        rating: 4.8,
+        review_count: 156,
+        is_active: true,
+    },
+    {
+        asin: 'B09SAMPLE03',
+        title: 'Mochila Trekking Deuter 65L - Con Funda Lluvia',
+        description: 'Sistema de ventilación Aircontact. Ideal rutas largas.',
+        price: 149.99,
+        original_price: 249.99,
+        discount: 40,
+        image_url: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400',
+        url: 'https://www.amazon.es/dp/B09SAMPLE03',
+        affiliate_url: 'https://www.amazon.es/dp/B09SAMPLE03?tag=camperdeals07-21',
+        category: 'mochilas',
+        rating: 4.7,
+        review_count: 89,
+        is_active: true,
+    },
+    {
+        asin: 'B09SAMPLE04',
+        title: 'Hornillo Gas Jetboil Flash - Hervidor Integrado',
+        description: 'Hierve 500ml en 100 segundos. Sistema FluxRing.',
+        price: 99.99,
+        original_price: 159.99,
+        discount: 37,
+        image_url: 'https://images.unsplash.com/photo-1536746803623-cef87080bfc8?w=400',
+        url: 'https://www.amazon.es/dp/B09SAMPLE04',
+        affiliate_url: 'https://www.amazon.es/dp/B09SAMPLE04?tag=camperdeals07-21',
+        category: 'cocina-camping',
+        rating: 4.9,
+        review_count: 312,
+        is_active: true,
+    },
+    {
+        asin: 'B09SAMPLE05',
+        title: 'Linterna Frontal Petzl Actik Core - 450 Lumens',
+        description: 'Recargable USB. Modo rojo para visión nocturna.',
+        price: 44.99,
+        original_price: 74.99,
+        discount: 40,
+        image_url: 'https://images.unsplash.com/photo-1567653418876-5bb0e566e1c2?w=400',
+        url: 'https://www.amazon.es/dp/B09SAMPLE05',
+        affiliate_url: 'https://www.amazon.es/dp/B09SAMPLE05?tag=camperdeals07-21',
+        category: 'iluminacion',
+        rating: 4.6,
+        review_count: 567,
+        is_active: true,
+    },
+];
+
+// Upsert ofertas en Supabase
+async function upsertDeals(deals: typeof SAMPLE_CAMPING_DEALS) {
+    const results = {
+        inserted: 0,
+        updated: 0,
+        errors: 0,
+    };
+
+    for (const deal of deals) {
+        const { error } = await supabase
+            .from('deals')
+            .upsert(
+                {
+                    ...deal,
+                    updated_at: new Date().toISOString(),
+                },
+                {
+                    onConflict: 'asin',
+                }
+            );
+
+        if (error) {
+            console.error(`Error upserting ${deal.asin}:`, error);
+            results.errors++;
+        } else {
+            results.inserted++;
+        }
+    }
+
+    return results;
+}
+
+// Desactivar ofertas antiguas (más de 7 días sin actualizar)
+async function deactivateOldDeals() {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const { data, error } = await supabase
+        .from('deals')
+        .update({ is_active: false })
+        .lt('updated_at', sevenDaysAgo.toISOString())
+        .eq('is_active', true)
+        .select('asin');
+
+    if (error) {
+        console.error('Error desactivando ofertas antiguas:', error);
+        return 0;
+    }
+
+    return data?.length || 0;
+}
+
+export async function GET(request: Request) {
+    // Verificar autorización
+    if (!isValidCronRequest(request)) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    console.log('🔍 CRON: Iniciando scraping de ofertas...');
+
+    try {
+        // TODO: En producción, aquí llamarías al scraper real:
+        // - Ejecutar script Python via subprocess
+        // - O llamar a una API externa de scraping
+        // - O usar una función serverless separada con más tiempo de ejecución
+
+        // Por ahora, usamos datos de ejemplo actualizados con timestamp
+        const deals = SAMPLE_CAMPING_DEALS.map((deal) => ({
+            ...deal,
+            // Variar ligeramente los precios para simular "ofertas nuevas"
+            price: parseFloat((deal.price * (0.95 + Math.random() * 0.1)).toFixed(2)),
+            discount: Math.floor(30 + Math.random() * 20), // 30-50%
+        }));
+
+        console.log(`📦 Procesando ${deals.length} ofertas...`);
+
+        // Upsert en Supabase
+        const upsertResults = await upsertDeals(deals);
+
+        // Desactivar ofertas antiguas
+        const deactivated = await deactivateOldDeals();
+
+        console.log(`✅ Scraping completado:`);
+        console.log(`   - Insertadas/Actualizadas: ${upsertResults.inserted}`);
+        console.log(`   - Errores: ${upsertResults.errors}`);
+        console.log(`   - Desactivadas (antiguas): ${deactivated}`);
+
+        return NextResponse.json({
+            success: true,
+            message: 'Scraping completed',
+            results: {
+                processed: deals.length,
+                ...upsertResults,
+                deactivated,
+            },
+            timestamp: new Date().toISOString(),
+            note: 'Using sample data. Configure real scraper for production.',
+        });
+    } catch (error) {
+        console.error('❌ Error en CRON scrape-deals:', error);
+        return NextResponse.json(
+            {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            },
+            { status: 500 }
+        );
+    }
+}
+
+// También permitir POST para testing manual
+export async function POST(request: Request) {
+    return GET(request);
+}

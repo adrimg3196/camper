@@ -1,10 +1,14 @@
 name: Fetch Amazon Deals
 
+# DESACTIVADO: Requiere Amazon PA-API con credenciales verificadas
+# El scraping se hace via Vercel CRON en /api/cron/scrape-deals
+# Reactivar cuando tengas AMAZON_ACCESS_KEY y AMAZON_SECRET_KEY
+
 on:
-  schedule:
-    # Cada 6 horas: 00:00, 06:00, 12:00, 18:00 UTC
-    - cron: '0 */6 * * *'
-  workflow_dispatch: # Permite ejecución manual
+  # schedule:
+  #   # Cada 6 horas: 00:00, 06:00, 12:00, 18:00 UTC
+  #   - cron: '0 */6 * * *'
+  workflow_dispatch: # Solo ejecución manual para testing
 
 env:
   AMAZON_ACCESS_KEY: ${{ secrets.AMAZON_ACCESS_KEY }}

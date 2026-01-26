@@ -26,40 +26,50 @@ interface OpenRouterResponse {
     };
 }
 
-// Modelos recomendados por caso de uso
+// Modelos recomendados por caso de uso - ACTUALIZADO 2026
 export const MODELS = {
-    // Mejor calidad - Marketing y copywriting
+    // ============================================
+    // MODELOS GRATUITOS (PRIORIDAD MÁXIMA)
+    // ============================================
+    FREE: {
+        // Los mejores modelos gratuitos de OpenRouter
+        llama3_70b: 'meta-llama/llama-3.3-70b-instruct:free', // Mejor gratuito, muy potente
+        llama3_8b: 'meta-llama/llama-3.1-8b-instruct:free',   // Rápido y gratuito
+        gemma2: 'google/gemma-2-9b-it:free',                   // Google gratuito
+        qwen: 'qwen/qwen-2.5-72b-instruct:free',              // Qwen 72B gratuito
+        mistral: 'mistralai/mistral-7b-instruct:free',         // Mistral gratuito
+        deepseek: 'deepseek/deepseek-chat:free',               // DeepSeek gratuito
+        phi3: 'microsoft/phi-3-medium-128k-instruct:free',     // Microsoft gratuito
+    },
+    // Mejor modelo gratuito por tarea
+    FREE_BEST: {
+        marketing: 'meta-llama/llama-3.3-70b-instruct:free',  // Marketing/Copy
+        seo: 'qwen/qwen-2.5-72b-instruct:free',               // SEO
+        creative: 'meta-llama/llama-3.3-70b-instruct:free',   // Creatividad
+        fast: 'meta-llama/llama-3.1-8b-instruct:free',        // Velocidad
+    },
+    // ============================================
+    // MODELOS DE PAGO (solo si se necesitan)
+    // ============================================
     PREMIUM: {
         gpt4: 'openai/gpt-4-turbo-preview',
-        claude: 'anthropic/claude-3.5-sonnet', // Claude 3.5 Sonnet (disponible y potente)
+        claude: 'anthropic/claude-3.5-sonnet',
         gemini: 'google/gemini-pro-1.5',
     },
-    // Balance calidad/precio - Contenido general
     BALANCED: {
         gpt4: 'openai/gpt-4o',
         claude: 'anthropic/claude-3.5-sonnet',
         gemini: 'google/gemini-pro',
     },
-    // Gratuitos - Modelos sin costo
-    FREE: {
-        llama: 'meta-llama/llama-3-8b-instruct:free',
-        mistral: 'mistralai/mistral-7b-instruct:free',
-        gemma: 'google/gemma-7b-it:free',
-        qwen: 'qwen/qwen-2-7b-instruct:free',
-    },
-    // Económico - Generación masiva
     ECONOMY: {
         gpt: 'openai/gpt-3.5-turbo',
         claude: 'anthropic/claude-3-haiku',
         llama: 'meta-llama/llama-3-70b-instruct',
     },
-    // Especializados
-    SPECIALIZED: {
-        tiktok: 'openai/gpt-4-turbo-preview', // Mejor para scripts creativos
-        seo: 'anthropic/claude-3.5-sonnet', // Mejor para SEO
-        ads: 'google/gemini-pro-1.5', // Mejor para copy de ads
-    },
 } as const;
+
+// Default: SIEMPRE usar modelos gratuitos
+export const DEFAULT_MODEL = MODELS.FREE.llama3_70b;
 
 export interface ContentGenerationOptions {
     model?: string;
@@ -81,14 +91,14 @@ export async function generateWithOpenRouter(
         throw new Error('OPENROUTER_API_KEY is not configured');
     }
 
-    // Seleccionar modelo - Priorizar gratuitos si no se especifica
+    // Seleccionar modelo - SIEMPRE priorizar gratuitos
     let model = options.model;
     if (!model && options.useBestModel) {
-        // Intentar primero con modelo gratuito
-        model = MODELS.FREE.llama; // Llama 3.8B gratuito
+        // Usar el mejor modelo gratuito (Llama 3.3 70B)
+        model = MODELS.FREE.llama3_70b;
     }
     if (!model) {
-        model = MODELS.FREE.llama; // Default: modelo gratuito
+        model = DEFAULT_MODEL; // Default: mejor modelo gratuito
     }
 
     try {
@@ -279,7 +289,7 @@ Responde SOLO con JSON válido:
 Todo en ESPAÑOL. Optimizado para posicionamiento en Google.`;
 
     const response = await generateWithOpenRouter(prompt, {
-        model: MODELS.SPECIALIZED.seo,
+        model: MODELS.FREE_BEST.seo, // Usar modelo gratuito para SEO
         ...options,
     });
 

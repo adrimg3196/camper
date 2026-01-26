@@ -105,7 +105,7 @@ export async function generateWithOpenRouter(
                     },
                 ],
                 temperature: options.temperature ?? 0.8,
-                max_tokens: options.maxTokens ?? 2000,
+                max_tokens: options.maxTokens ?? 1000, // Reducido para ahorrar créditos
             }),
         });
 

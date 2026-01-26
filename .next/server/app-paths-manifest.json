@@ -1,12 +1,15 @@
 {
-  "/api/marketing/generate/route": "app/api/marketing/generate/route.js",
-  "/robots.txt/route": "app/robots.txt/route.js",
   "/_not-found/page": "app/_not-found/page.js",
-  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/api/cron/scrape-deals/route": "app/api/cron/scrape-deals/route.js",
   "/blog/[slug]/page": "app/blog/[slug]/page.js",
-  "/page": "app/page.js",
+  "/api/marketing/generate/route": "app/api/marketing/generate/route.js",
+  "/api/cron/daily-publish/route": "app/api/cron/daily-publish/route.js",
+  "/robots.txt/route": "app/robots.txt/route.js",
+  "/sitemap.xml/route": "app/sitemap.xml/route.js",
+  "/api/system/status/route": "app/api/system/status/route.js",
   "/blog/page": "app/blog/page.js",
   "/ofertas/[slug]/page": "app/ofertas/[slug]/page.js",
-  "/dashboard/create/page": "app/dashboard/create/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/page": "app/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/create/page": "app/dashboard/create/page.js"
 }

@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
-// Verificar que es una llamada de CRON legítima de Vercel
+// Verificar que es una llamada de CRON legítima o del dashboard
 function isValidCronRequest(request: Request): boolean {
-    const authHeader = request.headers.get('authorization');
-    // En producción, Vercel añade un header de autorización
-    // En desarrollo, permitimos todas las llamadas
+    // En desarrollo, permitir todas las llamadas
     if (process.env.NODE_ENV === 'development') return true;
-    return authHeader === `Bearer ${process.env.CRON_SECRET}`;
+
+    // Verificar header de autorización (para Vercel CRONs)
+    const authHeader = request.headers.get('authorization');
+    if (authHeader === `Bearer ${process.env.CRON_SECRET}`) return true;
+
+    // Permitir llamadas desde el mismo origen (dashboard)
+    const referer = request.headers.get('referer');
+    const host = request.headers.get('host');
+    if (referer && host && referer.includes(host)) return true;
+
+    return false;
 }
 
 // Formatear oferta para Telegram

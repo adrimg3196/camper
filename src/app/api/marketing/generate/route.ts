@@ -1,18 +1,49 @@
 import { NextResponse } from 'next/server';
 import { generateMarketingContent } from '@/lib/gemini';
+import { generateMarketingContentAdvanced } from '@/lib/openrouter';
 import { generateVideo } from '@/lib/video';
 import path from 'path';
 import fs from 'fs';
 
 export async function POST(request: Request) {
     const body = await request.json();
-    const { topic, productUrl, platform } = body;
+    const { topic, productUrl, platform, productData, useOpenRouter } = body;
 
     try {
-        // Try to use real Gemini API
+        // Priorizar Gemini (gratuito) o usar OpenRouter con modelos gratuitos
         let data;
+        
+        // Primero intentar Gemini (gratuito y confiable)
         if (process.env.GOOGLE_API_KEY) {
-            data = await generateMarketingContent(topic, productUrl);
+            try {
+                console.log('Using Gemini (free)...');
+                data = await generateMarketingContent(topic, productUrl);
+            } catch (geminiError) {
+                console.warn('Gemini failed, trying OpenRouter free models:', geminiError);
+                // Fallback a OpenRouter con modelos gratuitos
+                if (useOpenRouter !== false && process.env.OPENROUTER_API_KEY) {
+                    try {
+                        data = await generateMarketingContentAdvanced(topic, productUrl, productData, {
+                            useBestModel: false, // Usar modelos gratuitos
+                        });
+                    } catch (openRouterError) {
+                        console.error('OpenRouter also failed:', openRouterError);
+                        throw new Error(`All AI providers failed. Gemini: ${geminiError instanceof Error ? geminiError.message : String(geminiError)}. OpenRouter: ${openRouterError instanceof Error ? openRouterError.message : String(openRouterError)}`);
+                    }
+                } else {
+                    throw geminiError;
+                }
+            }
+        } else if (useOpenRouter !== false && process.env.OPENROUTER_API_KEY) {
+            // Si no hay Gemini, usar OpenRouter con modelos gratuitos
+            try {
+                data = await generateMarketingContentAdvanced(topic, productUrl, productData, {
+                    useBestModel: false, // Usar modelos gratuitos
+                });
+            } catch (openRouterError) {
+                console.error('OpenRouter failed:', openRouterError);
+                throw new Error(`No AI provider configured. OpenRouter error: ${openRouterError instanceof Error ? openRouterError.message : String(openRouterError)}`);
+            }
         } else {
             // Fallback to mock if no key provided (for demo/testing)
             console.warn("GOOGLE_API_KEY not found, using mock data");

@@ -37,18 +37,27 @@ def job():
     print("✅ Ciclo completado. Esperando siguiente ejecución...")
 
 if __name__ == "__main__":
+    import os
+
     print("🚀 Iniciando Bot de Automatización 'Adventure Deals'...")
-    
-    # Ejecutar inmediatamente al arrancar
-    job()
-    
-    # Programar cada 6 horas
-    schedule.every(6).hours.do(job)
-    
-    # Mantener vivo el proceso
-    try:
-        while True:
-            schedule.run_pending()
-            time.sleep(1)
-    except KeyboardInterrupt:
-        print("\n👋 Bot detenido manualmente.")
+
+    # Configuración de frecuencia (horas entre ejecuciones)
+    RUN_INTERVAL_HOURS = int(os.getenv("RUN_INTERVAL_HOURS", "6"))
+
+    # En CI/CD (GitHub Actions), ejecutar una sola vez y salir
+    if os.getenv("CI"):
+        print("📍 Modo CI detectado - ejecución única")
+        job()
+        print("✅ Ejecución completada. Saliendo...")
+    else:
+        # Modo servidor (Render, local, etc): loop continuo
+        print(f"📍 Modo servidor - ejecutando cada {RUN_INTERVAL_HOURS} horas")
+        job()  # Ejecutar inmediatamente al iniciar
+        schedule.every(RUN_INTERVAL_HOURS).hours.do(job)
+
+        try:
+            while True:
+                schedule.run_pending()
+                time.sleep(60)  # Revisar cada minuto (más eficiente)
+        except KeyboardInterrupt:
+            print("\n👋 Bot detenido manualmente.")

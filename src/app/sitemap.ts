@@ -1,7 +1,8 @@
 import { MetadataRoute } from 'next';
+import { getSiteUrl } from '@/lib/config';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-    const baseUrl = 'https://ofertascamping.es';
+    const baseUrl = getSiteUrl();
     const currentDate = new Date();
 
     // Categorías principales de productos

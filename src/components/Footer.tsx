@@ -63,7 +63,7 @@ export default function Footer() {
                 {/* Divider + Legal */}
                 <div className="mt-12 pt-8 border-t border-slate-800">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <p className="text-xs text-slate-500">© {currentYear} CampingDeals España (ofertascamping.es). Todos los derechos reservados.</p>
+                        <p className="text-xs text-slate-500">© {currentYear} CampingDeals España. Todos los derechos reservados.</p>
                         <p className="text-xs text-slate-500 md:text-right max-w-lg">
                             <strong className="text-slate-400">Aviso:</strong> Como Afiliado de Amazon, obtenemos ingresos por las compras adscritas que cumplen los requisitos aplicables. Los precios pueden cambiar.
                         </p>

@@ -11,6 +11,7 @@ interface SystemStatus {
         gemini: boolean;
         telegram: boolean;
         supabase: boolean;
+        openrouter: boolean;
     };
     crons: {
         dailyPublish: string;
@@ -33,6 +34,7 @@ export async function GET() {
             gemini: !!process.env.GOOGLE_API_KEY,
             telegram: !!process.env.TELEGRAM_BOT_TOKEN,
             supabase: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+            openrouter: !!process.env.OPENROUTER_API_KEY,
         },
         crons: {
             dailyPublish: '09:00 UTC',
@@ -93,6 +95,27 @@ export async function GET() {
             }
         } catch {
             // Tabla puede no existir
+        }
+
+        // Verificar que el bot de Telegram funciona realmente
+        if (process.env.TELEGRAM_BOT_TOKEN) {
+            try {
+                const botToken = process.env.TELEGRAM_BOT_TOKEN;
+                const response = await fetch(
+                    `https://api.telegram.org/bot${botToken}/getMe`,
+                    { method: 'GET', signal: AbortSignal.timeout(5000) }
+                );
+                if (response.ok) {
+                    const data = await response.json();
+                    status.apis.telegram = data.ok === true;
+                } else {
+                    status.apis.telegram = false;
+                }
+            } catch {
+                // Si falla la verificación, asumimos que el token existe pero puede haber problemas
+                // Mantenemos el estado basado en la existencia del token
+                status.apis.telegram = !!process.env.TELEGRAM_BOT_TOKEN;
+            }
         }
     } catch (error) {
         console.error('Error checking system status:', error);

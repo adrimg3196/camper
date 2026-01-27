@@ -31,3 +31,5 @@ __pycache__/
 tsconfig.tsbuildinfo
 video_temp.mp4
 backend/tiktok_profile/
+.env*.local
+.env.vercel

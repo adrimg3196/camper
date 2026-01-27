@@ -4,6 +4,7 @@ import ProductCard from '@/components/ProductCard';
 import StatCard from '@/components/StatCard';
 import { getProducts } from '@/lib/deals';
 import { CATEGORIES } from '@/lib/types';
+import { getSiteUrl } from '@/lib/config';
 import Link from 'next/link';
 import { Metadata } from 'next';
 
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
     title: "Ofertas Camping 2026 | Chollos Amazon +30% Descuento | CampingDeals España",
     description: "🏕️ Las MEJORES ofertas de camping 2026 con +30% descuento. Tiendas de campaña, sacos de dormir, mochilas trekking baratas. ✓ Actualizado diariamente ✓ Envío Prime ✓ Precios más bajos garantizados en Amazon España.",
     alternates: {
-        canonical: "https://ofertascamping.es",
+        canonical: process.env.NEXT_PUBLIC_SITE_URL || "https://camper-omega.vercel.app",
     },
 };
 
@@ -40,7 +41,7 @@ export default async function Home() {
                 "@type": "Product",
                 "name": product.title,
                 "description": product.marketing_description || product.description || '',
-                "url": product.url,
+                "url": product.affiliate_url || product.url,
                 "image": product.image_url,
                 "brand": { "@type": "Brand", "name": "Amazon" },
                 "offers": {
@@ -59,12 +60,13 @@ export default async function Home() {
         }))
     };
 
+    const siteUrl = getSiteUrl();
     const organizationSchema = {
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": "CampingDeals España",
-        "url": "https://ofertascamping.es",
-        "logo": "https://ofertascamping.es/logo.png",
+        "url": siteUrl,
+        "logo": `${siteUrl}/logo.png`,
         "description": "Las mejores ofertas de camping y outdoor con más del 30% de descuento en Amazon España"
     };
 

@@ -12,6 +12,7 @@ interface SystemStatus {
         gemini: boolean;
         telegram: boolean;
         supabase: boolean;
+        openrouter: boolean;
     };
     crons: {
         dailyPublish: string;
@@ -146,6 +147,10 @@ export default function DashboardHome() {
                             <StatusBadge
                                 active={status.apis.telegram}
                                 label="Telegram Bot"
+                            />
+                            <StatusBadge
+                                active={status.apis.openrouter}
+                                label="OpenRouter AI"
                             />
                         </div>
 
@@ -337,6 +342,18 @@ export default function DashboardHome() {
                                 GOOGLE_API_KEY
                             </code>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <span
+                                className={`w-2 h-2 rounded-full ${
+                                    status?.apis.openrouter
+                                        ? 'bg-green-400'
+                                        : 'bg-yellow-400'
+                                }`}
+                            />
+                            <code className="text-slate-300">
+                                OPENROUTER_API_KEY
+                            </code>
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
@@ -352,21 +369,55 @@ export default function DashboardHome() {
                             </code>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-slate-400" />
+                            <span
+                                className={`w-2 h-2 rounded-full ${
+                                    status?.apis.telegram
+                                        ? 'bg-green-400'
+                                        : 'bg-yellow-400'
+                                }`}
+                            />
                             <code className="text-slate-300">
                                 TELEGRAM_CHANNEL_ID
                             </code>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-slate-400" />
+                            <span
+                                className={`w-2 h-2 rounded-full ${
+                                    status?.apis.telegram
+                                        ? 'bg-green-400'
+                                        : 'bg-slate-400'
+                                }`}
+                            />
                             <code className="text-slate-300">CRON_SECRET</code>
                         </div>
                     </div>
                 </div>
-                <p className="text-slate-500 text-xs mt-4">
-                    Configura estas variables en Vercel &gt; Settings &gt;
-                    Environment Variables
-                </p>
+                <div className="mt-4 space-y-2">
+                    <p className="text-slate-500 text-xs">
+                        Configura estas variables en Vercel &gt; Settings &gt;
+                        Environment Variables
+                    </p>
+                    {!status?.apis.telegram && (
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-sm">
+                            <p className="text-yellow-400 font-medium mb-1">
+                                ⚠️ Bot de Telegram no configurado
+                            </p>
+                            <p className="text-slate-400 text-xs">
+                                Sigue la{' '}
+                                <a
+                                    href="/GUIA_TELEGRAM_BOT.md"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:text-blue-300 underline"
+                                >
+                                    guía completa
+                                </a>{' '}
+                                para configurar el bot y activar las publicaciones
+                                automáticas.
+                            </p>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Active Campaigns */}

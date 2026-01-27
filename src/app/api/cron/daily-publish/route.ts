@@ -60,6 +60,11 @@ async function sendTelegramMessage(message: string, imageUrl?: string): Promise<
         return false;
     }
 
+    if (!channelId) {
+        console.warn('TELEGRAM_CHANNEL_ID no configurado');
+        return false;
+    }
+
     try {
         const baseUrl = `https://api.telegram.org/bot${botToken}`;
 
@@ -75,7 +80,14 @@ async function sendTelegramMessage(message: string, imageUrl?: string): Promise<
                     parse_mode: 'Markdown',
                 }),
             });
-            return response.ok;
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error Telegram sendPhoto:', errorData);
+                return false;
+            }
+
+            return true;
         } else {
             // Enviar solo texto
             const response = await fetch(`${baseUrl}/sendMessage`, {
@@ -88,7 +100,24 @@ async function sendTelegramMessage(message: string, imageUrl?: string): Promise<
                     disable_web_page_preview: false,
                 }),
             });
-            return response.ok;
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('Error Telegram sendMessage:', errorData);
+                
+                // Errores comunes y sus soluciones
+                if (errorData.error_code === 400) {
+                    console.error('Error 400: Verifica que el ID del canal sea correcto');
+                } else if (errorData.error_code === 403) {
+                    console.error('Error 403: El bot no tiene permisos para publicar en el canal');
+                } else if (errorData.error_code === 401) {
+                    console.error('Error 401: Token de bot inválido');
+                }
+                
+                return false;
+            }
+
+            return true;
         }
     } catch (error) {
         console.error('Error enviando mensaje Telegram:', error);

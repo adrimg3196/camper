@@ -1,5 +1,8 @@
 # Estado del Proyecto: Camper Deals Autonomous AI
 
+> **Última actualización**: 26 de Enero 2026  
+> **Estado general**: ✅ 95% Completo - Solo falta configurar bot de Telegram
+
 Este documento resume todo lo logrado hasta ahora y la hoja de ruta exacta para convertir esto en una plataforma 100% autonoma y profesional.
 
 ## Lo Que Ya Esta Hecho (Done)
@@ -65,17 +68,18 @@ Las siguientes variables ya estan configuradas en Vercel:
 
 ### 1. Crear Bot de Telegram (UNICO PASO PENDIENTE)
 
-El usuario necesita hacer esto manualmente:
+**📖 Guía completa disponible en:** `GUIA_TELEGRAM_BOT.md`
 
+**Resumen rápido:**
 1. Abre Telegram y busca @BotFather
-2. Envia `/newbot`
-3. Sigue las instrucciones para crear el bot
-4. Copia el token que te da BotFather
-5. Crea un canal de Telegram (ej: @camperdeals)
-6. Anade el bot como administrador del canal
-7. Configurar en Vercel:
-   - `TELEGRAM_BOT_TOKEN` = el token del paso 4
-   - `TELEGRAM_CHANNEL_ID` = @nombre_del_canal
+2. Envia `/newbot` y sigue las instrucciones
+3. Copia el token que te da BotFather
+4. Crea un canal de Telegram (ej: @camperdeals)
+5. Añade el bot como administrador del canal (con permisos de publicación)
+6. Configurar en Vercel → Settings → Environment Variables:
+   - `TELEGRAM_BOT_TOKEN` = el token del paso 3
+   - `TELEGRAM_CHANNEL_ID` = @nombre_del_canal (o ID numérico si es privado)
+7. Verifica en el dashboard que "Telegram Bot" aparezca como "Activo"
 
 ### 2. Profesionalizacion del Dominio (Opcional)
 

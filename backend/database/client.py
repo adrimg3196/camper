@@ -38,7 +38,9 @@ class SupabaseManager:
         if self.enabled:
             try:
                 endpoint = f"{self.url}/rest/v1/deals"
-                response = requests.post(endpoint, headers=self.headers, json=deal_data)
+                # Remove 'id' and 'asin' fields not in schema; let Supabase auto-generate id
+                clean_data = {k: v for k, v in deal_data.items() if k not in ("id", "asin")}
+                response = requests.post(endpoint, headers=self.headers, json=clean_data)
                 
                 if response.status_code in [200, 201, 204]:
                     print(f"💾 Oferta guardada en DB: {deal_data.get('title')}")

@@ -8,19 +8,75 @@ load_dotenv()
 
 class ContentEnhancer:
     def __init__(self):
-        self.api_key = os.environ.get("HUGGINGFACE_API_KEY")
-        self.model = os.environ.get("HUGGINGFACE_MODEL", "HuggingFaceH4/zephyr-7b-beta")
-        self.api_url = f"https://router.huggingface.co/models/{self.model}"
+        self.google_api_key = os.environ.get("GOOGLE_AI_API_KEY")
+        self.hf_api_key = os.environ.get("HUGGINGFACE_API_KEY")
+        self.hf_model = os.environ.get("HUGGINGFACE_MODEL", "HuggingFaceH4/zephyr-7b-beta")
+        self.hf_api_url = f"https://router.huggingface.co/models/{self.hf_model}"
 
     def enhance_product(self, product_data: dict) -> dict:
-        """Enriquece los datos del producto usando modelos Open Source gratuitos."""
-        
+        """Enriquece los datos del producto usando IA."""
+
         print(f"🧠 Mejorando contenido para: {product_data.get('title')}...")
 
-        if self.api_key and not self.api_key.startswith("hf_placeholder"):
+        if self.google_api_key:
+            return self._enhance_with_google_ai(product_data)
+        elif self.hf_api_key and not self.hf_api_key.startswith("hf_placeholder"):
             return self._enhance_with_huggingface(product_data)
         else:
-            print("⚠️ No HUGGINGFACE_API_KEY found. Using templates.")
+            print("⚠️ No AI API key found. Using templates.")
+            return self._enhance_with_templates(product_data)
+
+    def _enhance_with_google_ai(self, product_data):
+        """Usa Google AI Studio (Gemini) API."""
+        try:
+            prompt = f"""Actúa como un experto en marketing de aventuras y camping.
+Producto: "{product_data['title']}" ({product_data.get('category', 'camping')}).
+Precio: {product_data.get('price', 'N/A')}€.
+
+Escribe un JSON con estos campos:
+- marketing_title: Título corto y emocionante (max 50 letras).
+- marketing_description: Una frase persuasiva que destaque beneficios.
+- tags: Lista de 5 hashtags relevantes.
+
+Solo responde con el JSON, sin texto adicional."""
+
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={self.google_api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.7, "maxOutputTokens": 300}
+            }
+
+            response = requests.post(url, json=payload, timeout=15)
+
+            if response.status_code == 200:
+                result = response.json()
+                text = result['candidates'][0]['content']['parts'][0]['text']
+                clean_text = text.strip()
+                if clean_text.startswith("```json"):
+                    clean_text = clean_text.replace("```json", "").replace("```", "").strip()
+                elif clean_text.startswith("```"):
+                    clean_text = clean_text[3:]
+                    if clean_text.endswith("```"):
+                        clean_text = clean_text[:-3]
+                    clean_text = clean_text.strip()
+
+                try:
+                    data = json.loads(clean_text)
+                    product_data['marketing_title'] = data.get('marketing_title', product_data['title'])
+                    product_data['marketing_description'] = data.get('marketing_description', "")
+                    print("✨ IA (Google Gemini) ha generado contenido.")
+                except json.JSONDecodeError:
+                    product_data['marketing_title'] = f"¡OFERTA! {product_data['title'][:30]}..."
+                    product_data['marketing_description'] = clean_text[:200]
+                    print("✨ IA (Google Gemini) contenido generado (texto plano).")
+
+                return product_data
+            else:
+                print(f"⚠️ Error Google AI API ({response.status_code}): {response.text[:200]}")
+                return self._enhance_with_templates(product_data)
+
+        except Exception as e:
+            print(f"⚠️ Error conexión Google AI: {e}. Usando template fallback.")
             return self._enhance_with_templates(product_data)
 
     def _enhance_with_huggingface(self, product_data):

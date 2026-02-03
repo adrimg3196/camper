@@ -120,17 +120,10 @@ class TikTokUploader:
         if not self.driver:
             self.start_browser()
 
-        # If session was already verified during cookie injection, skip re-navigation
-        if self.session_verified:
-            print("🚀 Sesión ya verificada, navegando a upload...")
-            # Already on upload page from cookie verification, just refresh
-            if "upload" not in self.driver.current_url:
-                self.driver.get("https://www.tiktok.com/upload?lang=es")
-                time.sleep(3)
-        else:
-            print("🚀 Abriendo TikTok para subir video...")
-            self.driver.get("https://www.tiktok.com/upload?lang=es")
-            time.sleep(5)
+        # Always navigate to fresh upload page for each video
+        print("🚀 Navegando a página de upload...")
+        self.driver.get("https://www.tiktok.com/upload?lang=es")
+        time.sleep(4)
 
         # 1. Verificar Login
         print("👀 Verificando sesión...")
@@ -155,8 +148,10 @@ class TikTokUploader:
         # 2. Subir Archivo
         try:
             print(f"📤 Subiendo archivo: {video_path}")
-            # Encontrar el input file oculto
-            file_input = self.driver.find_element(By.XPATH, "//input[@type='file']")
+            # Wait for file input to be available (up to 15 seconds)
+            file_input = WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.XPATH, "//input[@type='file']"))
+            )
             file_input.send_keys(os.path.abspath(video_path))
             
             # Esperar a que se procese (aparece barra de carga o cambio de UI)

@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 // Verificar que es una llamada de CRON legítima o del dashboard
 function isValidCronRequest(request: Request): boolean {
@@ -159,43 +163,121 @@ export async function GET(request: Request) {
     console.log('🔍 CRON: Iniciando scraping de ofertas...');
 
     try {
-        // TODO: En producción, aquí llamarías al scraper real:
-        // - Ejecutar script Python via subprocess
-        // - O llamar a una API externa de scraping
-        // - O usar una función serverless separada con más tiempo de ejecución
-
-        // Por ahora, usamos datos de ejemplo actualizados con timestamp
-        const deals = SAMPLE_CAMPING_DEALS.map((deal) => ({
-            ...deal,
-            // Variar ligeramente los precios para simular "ofertas nuevas"
-            price: parseFloat((deal.price * (0.95 + Math.random() * 0.1)).toFixed(2)),
-            discount: Math.floor(30 + Math.random() * 20), // 30-50%
-        }));
+            // Ejecutar scraper profesional
+            let deals: any[] = [];
+            
+            try {
+                console.log('🚀 Ejecutando scraper profesional...');
+                
+                const { exec } = require('child_process');
+                const { promisify } = require('util');
+                const execAsync = promisify(exec);
+                
+                // Configurar variables de entorno
+                const sevenDaysAgo = new Date();
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                
+                const env = {
+                    ...process.env,
+                    SCRAPE_TIME: new Date().toISOString(),
+                    SEVEN_DAYS_AGO: sevenDaysAgo.toISOString(),
+                    AMAZON_PARTNER_TAG: process.env.AMAZON_PARTNER_TAG || 'camperdeals-21',
+                };
+                
+                // Ejecutar scraper profesional (más robusto)
+                const { stdout, stderr } = await execAsync('python3 scraper/professional_amazon_scraper.py', {
+                    cwd: process.cwd(),
+                    env: env,
+                    timeout: 600000, // 10 minutos máximo
+                });
+                
+                if (stderr) {
+                    console.warn('⚠️ Advertencias del scraper:', stderr);
+                }
+                
+                console.log('📊 Analizando resultados del scraper...');
+                
+                // Extraer productos del JSON output
+                const productsMatch = stdout.match(/\{[\s\S]*\}/);
+                if (productsMatch) {
+                    const scraperResult = JSON.parse(productsMatch[0]);
+                    
+                    if (scraperResult.success && scraperResult.products_found > 0) {
+                        console.log(`✅ Scraper encontró ${scraperResult.products_found} productos`);
+                        
+                        // Transformar productos al formato de la DB
+                        const transformedDeals = require('fs').readFileSync('test_results.json', 'utf8');
+                        const testData = JSON.parse(transformedDeals);
+                        
+                        if (testData.products && testData.products.length > 0) {
+                            deals = testData.products.map((product: any) => ({
+                                asin: product.asin,
+                                title: product.title,
+                                description: product.description,
+                                price: product.current_price,
+                                original_price: product.original_price,
+                                discount: product.discount,
+                                image_url: product.image_url,
+                                url: product.url,
+                                affiliate_url: product.affiliate_url,
+                                category: product.category,
+                                rating: product.rating,
+                                review_count: product.review_count,
+                                is_active: true,
+                            }));
+                            
+                            // Guardar en Supabase
+                            const upsertResults = await upsertDeals(deals);
+                            const deactivated = await deactivateOldDeals();
+                            
+                            console.log(`💾 Guardadas ${upsertResults.inserted} ofertas en Supabase`);
+                            
+                            return NextResponse.json({
+                                success: true,
+                                message: 'Professional scraping completed',
+                                results: {
+                                    processed: deals.length,
+                                    ...upsertResults,
+                                    deactivated,
+                                },
+                                timestamp: new Date().toISOString(),
+                                scraper_used: 'professional_python',
+                            });
+                        }
+                    }
+                }
+                
+                throw new Error('Scraper no devolvió resultados válidos');
+                
+            } catch (scraperError) {
+                console.error('❌ Error ejecutando scraper profesional:', scraperError);
+            }
 
         console.log(`📦 Procesando ${deals.length} ofertas...`);
 
-        // Upsert en Supabase
-        const upsertResults = await upsertDeals(deals);
+            // Upsert en Supabase (solo si usamos fallback de datos de ejemplo)
+            const upsertResults = await upsertDeals(deals);
 
-        // Desactivar ofertas antiguas
-        const deactivated = await deactivateOldDeals();
+            // Desactivar ofertas antiguas
+            const deactivated = await deactivateOldDeals();
 
-        console.log(`✅ Scraping completado:`);
-        console.log(`   - Insertadas/Actualizadas: ${upsertResults.inserted}`);
-        console.log(`   - Errores: ${upsertResults.errors}`);
-        console.log(`   - Desactivadas (antiguas): ${deactivated}`);
+            console.log(`✅ Scraping completado (fallback):`);
+            console.log(`   - Insertadas/Actualizadas: ${upsertResults.inserted}`);
+            console.log(`   - Errores: ${upsertResults.errors}`);
+            console.log(`   - Desactivadas (antiguas): ${deactivated}`);
 
-        return NextResponse.json({
-            success: true,
-            message: 'Scraping completed',
-            results: {
-                processed: deals.length,
-                ...upsertResults,
-                deactivated,
-            },
-            timestamp: new Date().toISOString(),
-            note: 'Using sample data. Configure real scraper for production.',
-        });
+            return NextResponse.json({
+                success: true,
+                message: 'Scraping completed (fallback mode)',
+                results: {
+                    processed: deals.length,
+                    ...upsertResults,
+                    deactivated,
+                },
+                timestamp: new Date().toISOString(),
+                scraper_used: 'sample_data',
+                note: 'Python scraper failed, using sample data as fallback',
+            });
     } catch (error) {
         console.error('❌ Error en CRON scrape-deals:', error);
         return NextResponse.json(

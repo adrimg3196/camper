@@ -10,6 +10,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 class TikTokUploader:
     def __init__(self):
         self.driver = None
+        self.session_verified = False  # Track if session is verified
 
     def start_browser(self):
         """Inicia un navegador Chrome controlado por Selenium."""
@@ -87,7 +88,30 @@ class TikTokUploader:
             
             print(f"✅ {len(cookies)} cookies inyectadas. Refrescando...")
             self.driver.refresh()
+            time.sleep(5)  # Wait longer for session to establish
+
+            # Verify session is active by checking if we can access upload page
+            self.driver.get("https://www.tiktok.com/upload?lang=es")
             time.sleep(3)
+
+            if "login" not in self.driver.current_url:
+                print("✅ Sesión verificada correctamente.")
+                self.session_verified = True
+            else:
+                print("⚠️ Sesión no establecida tras primer intento. Reintentando...")
+                # Second attempt - refresh and wait more
+                self.driver.get("https://www.tiktok.com")
+                time.sleep(2)
+                self.driver.refresh()
+                time.sleep(5)
+                self.driver.get("https://www.tiktok.com/upload?lang=es")
+                time.sleep(3)
+                if "login" not in self.driver.current_url:
+                    print("✅ Sesión verificada en segundo intento.")
+                    self.session_verified = True
+                else:
+                    print("❌ No se pudo establecer sesión. Las cookies pueden haber expirado.")
+
         except Exception as e:
             print(f"❌ Error inyectando cookies: {e}")
 
@@ -96,13 +120,21 @@ class TikTokUploader:
         if not self.driver:
             self.start_browser()
 
-        print("🚀 Abriendo TikTok para subir video...")
-        self.driver.get("https://www.tiktok.com/upload?lang=es")
+        # If session was already verified during cookie injection, skip re-navigation
+        if self.session_verified:
+            print("🚀 Sesión ya verificada, navegando a upload...")
+            # Already on upload page from cookie verification, just refresh
+            if "upload" not in self.driver.current_url:
+                self.driver.get("https://www.tiktok.com/upload?lang=es")
+                time.sleep(3)
+        else:
+            print("🚀 Abriendo TikTok para subir video...")
+            self.driver.get("https://www.tiktok.com/upload?lang=es")
+            time.sleep(5)
 
         # 1. Verificar Login
         print("👀 Verificando sesión...")
-        time.sleep(5) 
-        
+
         if "login" in self.driver.current_url:
             print("⚠️ NO LOGUEADO.")
             # Si estamos en CI, esto es fatal

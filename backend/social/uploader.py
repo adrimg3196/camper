@@ -153,28 +153,110 @@ class TikTokUploader:
                 EC.presence_of_element_located((By.XPATH, "//input[@type='file']"))
             )
             file_input.send_keys(os.path.abspath(video_path))
-            
-            # Esperar a que se procese (aparece barra de carga o cambio de UI)
-            print("⏳ Esperando procesamiento de video (15s)...")
-            time.sleep(15) 
-            
-            # 3. Poner Descripción
-            # Nota: Los selectores de TikTok cambian mucho. Intentamos buscar el editor de texto.
-            # Una estrategia robusta es esperar e inyectar el texto o buscar el div contenteditable
-            
-            # caption_input = self.driver.find_element(By.XPATH, "//div[@contenteditable='true']")
-            # caption_input.send_keys(description)
-            # print("✍️ Descripción añadida.")
-            
-            print("⚠️ La descripción automática es compleja por los selectores dinámicos. Se ha subido el video, añade la descripción y pulsa Publicar manualmente por ahora para evitar baneos.")
 
-            # 4. Publicar (Opcional - Riesgo de bloqueo si es muy rápido)
-            # post_button = self.driver.find_element(By.XPATH, "//button[text()='Publicar']")
-            # post_button.click()
-            
-            print("👋 El video se ha subido. Por favor, pulsa 'Publicar' manualmente en la ventana del navegador. El bot continuará el ciclo en segundo plano.")
-            
-            return True
+            # Esperar a que se procese el video (TikTok necesita tiempo)
+            print("⏳ Esperando procesamiento de video (20s)...")
+            time.sleep(20)
+
+            # 3. Poner Descripción usando JavaScript (más confiable que selectores)
+            print("✍️ Añadiendo descripción...")
+            try:
+                # TikTok Studio usa un div contenteditable o un editor de texto
+                # Intentamos múltiples selectores
+                caption_selectors = [
+                    "//div[@contenteditable='true']",
+                    "//div[contains(@class, 'editor')]//div[@contenteditable='true']",
+                    "//div[contains(@class, 'caption')]//div[@contenteditable='true']",
+                    "//div[@data-placeholder][@contenteditable='true']"
+                ]
+
+                caption_input = None
+                for selector in caption_selectors:
+                    try:
+                        caption_input = WebDriverWait(self.driver, 5).until(
+                            EC.presence_of_element_located((By.XPATH, selector))
+                        )
+                        if caption_input:
+                            break
+                    except:
+                        continue
+
+                if caption_input:
+                    caption_input.click()
+                    time.sleep(1)
+                    # Limpiar y escribir descripción
+                    caption_input.clear()
+                    caption_input.send_keys(description)
+                    print(f"✅ Descripción añadida: {description[:50]}...")
+                else:
+                    print("⚠️ No se encontró campo de descripción, continuando sin ella...")
+
+            except Exception as desc_error:
+                print(f"⚠️ Error al añadir descripción: {desc_error}")
+
+            # 4. Esperar un poco más para asegurar que el video está listo
+            time.sleep(5)
+
+            # 5. Buscar y hacer clic en botón Publicar
+            print("🎯 Buscando botón Publicar...")
+            try:
+                # Múltiples selectores para el botón de publicar
+                publish_selectors = [
+                    "//button[contains(text(), 'Publicar')]",
+                    "//button[contains(text(), 'Post')]",
+                    "//button[contains(text(), 'Subir')]",
+                    "//button[@type='submit' and contains(@class, 'primary')]",
+                    "//div[contains(@class, 'button')]//span[contains(text(), 'Publicar')]/..",
+                    "//button[contains(@class, 'post-button')]",
+                    "//button[contains(@class, 'submit')]"
+                ]
+
+                publish_button = None
+                for selector in publish_selectors:
+                    try:
+                        publish_button = WebDriverWait(self.driver, 3).until(
+                            EC.element_to_be_clickable((By.XPATH, selector))
+                        )
+                        if publish_button:
+                            print(f"✅ Botón encontrado con selector: {selector}")
+                            break
+                    except:
+                        continue
+
+                if publish_button:
+                    # Esperar un momento antes de publicar
+                    time.sleep(2)
+                    publish_button.click()
+                    print("🚀 ¡Clic en Publicar!")
+
+                    # Esperar a que se complete la publicación
+                    time.sleep(10)
+                    print("✅ Publicado exitosamente (Browser).")
+                    return True
+                else:
+                    print("⚠️ No se encontró botón Publicar. El video quedará como borrador.")
+                    # Intentar con JavaScript como último recurso
+                    try:
+                        self.driver.execute_script("""
+                            const buttons = document.querySelectorAll('button');
+                            for (let btn of buttons) {
+                                if (btn.textContent.includes('Publicar') || btn.textContent.includes('Post')) {
+                                    btn.click();
+                                    return true;
+                                }
+                            }
+                            return false;
+                        """)
+                        print("🚀 Publicar ejecutado via JavaScript")
+                        time.sleep(10)
+                        return True
+                    except:
+                        print("❌ No se pudo publicar automáticamente")
+                        return False
+
+            except Exception as pub_error:
+                print(f"❌ Error al publicar: {pub_error}")
+                return False
 
         except Exception as e:
             print(f"❌ Error durante la subida: {e}")

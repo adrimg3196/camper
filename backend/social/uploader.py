@@ -1,227 +1,180 @@
-import time
+"""
+TikTok Video Uploader usando tiktok-uploader library
+Esta librería tiene bypass anti-bot integrado y funciona con cookies exportadas.
+"""
 import os
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
+import json
+import tempfile
+
 
 class TikTokUploader:
     def __init__(self):
-        self.driver = None
-        self.session_verified = False  # Track if session is verified
+        self.cookies_file = None
+        self._setup_cookies()
 
-    def start_browser(self):
-        """Inicia un navegador Chrome controlado por Selenium."""
-        options = webdriver.ChromeOptions()
-        
-        # Detectar entorno CI/CD (GitHub Actions)
-        is_ci = os.environ.get("CI") == "true"
-        
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--remote-debugging-port=9222")
-        
-        if is_ci:
-            print("🤖 Entorno CI detectado: Ejecutando en modo HEADLESS.")
-            options.add_argument("--headless=new")
-            options.add_argument("--window-size=1920,1080")
-            # En CI no usamos perfil persistente local, usaremos cookies inyectadas
-        else:
-            options.add_argument("--start-maximized")
-            # Mantener sesión iniciada (Solo local)
-            profile_path = os.path.join(os.getcwd(), "backend", "tiktok_profile")
-            # Limpiar lock si existe
-            lock_file = os.path.join(profile_path, "SingletonLock")
-            if os.path.exists(lock_file):
-                try: os.remove(lock_file)
-                except: pass
-            options.add_argument(f"user-data-dir={profile_path}")
-
-        driver_path = ChromeDriverManager().install()
-        # Fix mac-arm64
-        if "THIRD_PARTY" in driver_path:
-             driver_path = driver_path.replace("THIRD_PARTY_NOTICES.chromedriver", "chromedriver")
-
-        # Asegurar permisos
-        os.chmod(driver_path, 0o755)
-
-        self.driver = webdriver.Chrome(service=Service(driver_path), options=options)
-        
-        # Inyectar cookies si estamos en CI
-        if is_ci:
-            self._inject_cookies()
-
-    def _inject_cookies(self):
-        """Inyecta cookies desde variable de entorno para mantener sesión en CI."""
-        import json
+    def _setup_cookies(self):
+        """Prepara el archivo de cookies desde la variable de entorno."""
         cookies_json = os.environ.get("TIKTOK_COOKIES_JSON")
         if not cookies_json:
-            print("⚠️ CI detectado pero no hay TIKTOK_COOKIES_JSON. El login fallará.")
+            print("⚠️ No hay TIKTOK_COOKIES_JSON configurado.")
             return
 
-        print("🍪 Inyectando cookies de sesión...")
         try:
-            # Necesitamos ir al dominio antes de poner cookies
-            self.driver.get("https://www.tiktok.com")
-            
             cookies = json.loads(cookies_json)
+
+            # Crear archivo temporal con las cookies en formato Netscape
+            self.cookies_file = tempfile.NamedTemporaryFile(
+                mode='w',
+                suffix='.txt',
+                delete=False
+            )
+
+            # Escribir en formato Netscape cookies.txt
+            self.cookies_file.write("# Netscape HTTP Cookie File\n")
             for cookie in cookies:
-                # Selenium exige ciertos campos, y rechaza 'sameSite' a veces si no es estricto
-                if 'sameSite' in cookie:
-                    if cookie['sameSite'] not in ["Strict", "Lax", "None"]:
-                        del cookie['sameSite']
-                
-                # Asegurar dominio correcto (a veces exportan .tiktok.com)
-                if 'domain' in cookie:
-                     # Solo permitir cookies del dominio actual o subdominios validos
-                     pass
-                
-                try:
-                    self.driver.add_cookie(cookie)
-                except Exception as e:
-                    # Ignorar errores de cookies individuales (a veces hay basura)
-                    pass
-            
-            print(f"✅ {len(cookies)} cookies inyectadas. Refrescando...")
-            self.driver.refresh()
-            time.sleep(5)  # Wait longer for session to establish
+                domain = cookie.get('domain', '.tiktok.com')
+                if not domain.startswith('.'):
+                    domain = '.' + domain
 
-            # Verify session is active by checking if we can access upload page
-            self.driver.get("https://www.tiktok.com/upload?lang=es")
-            time.sleep(3)
+                flag = "TRUE" if domain.startswith('.') else "FALSE"
+                path = cookie.get('path', '/')
+                secure = "TRUE" if cookie.get('secure', False) else "FALSE"
+                expiry = str(int(cookie.get('expirationDate', 0)))
+                name = cookie.get('name', '')
+                value = cookie.get('value', '')
 
-            if "login" not in self.driver.current_url:
-                print("✅ Sesión verificada correctamente.")
-                self.session_verified = True
-            else:
-                print("⚠️ Sesión no establecida tras primer intento. Reintentando...")
-                # Second attempt - refresh and wait more
-                self.driver.get("https://www.tiktok.com")
-                time.sleep(2)
-                self.driver.refresh()
-                time.sleep(5)
-                self.driver.get("https://www.tiktok.com/upload?lang=es")
-                time.sleep(3)
-                if "login" not in self.driver.current_url:
-                    print("✅ Sesión verificada en segundo intento.")
-                    self.session_verified = True
-                else:
-                    print("❌ No se pudo establecer sesión. Las cookies pueden haber expirado.")
+                line = f"{domain}\t{flag}\t{path}\t{secure}\t{expiry}\t{name}\t{value}\n"
+                self.cookies_file.write(line)
+
+            self.cookies_file.close()
+            print(f"✅ Cookies preparadas: {len(cookies)} cookies cargadas")
 
         except Exception as e:
-            print(f"❌ Error inyectando cookies: {e}")
+            print(f"❌ Error preparando cookies: {e}")
+            self.cookies_file = None
 
     def upload_video(self, video_path, description):
-        """Sube un video a TikTok."""
-        if not self.driver:
-            self.start_browser()
+        """
+        Sube un video a TikTok usando tiktok-uploader library.
+        Esta librería tiene bypass anti-bot integrado.
+        """
+        if not self.cookies_file:
+            print("❌ No hay cookies configuradas. Configura TIKTOK_COOKIES_JSON.")
+            return False
 
-        # Always navigate to fresh upload page for each video
-        print("🚀 Navegando a página de upload...")
-        self.driver.get("https://www.tiktok.com/upload?lang=es")
-        time.sleep(4)
-
-        # 1. Verificar Login
-        print("👀 Verificando sesión...")
-
-        if "login" in self.driver.current_url:
-            print("⚠️ NO LOGUEADO.")
-            # Si estamos en CI, esto es fatal
-            if os.environ.get("CI") == "true":
-                print("❌ Error fatal en CI: Las cookies han expirado o son inválidas.")
-                return False
-                
-            print("⏳ Esperando 60 segundos para login manual (Entorno Local)...")
-            try:
-                WebDriverWait(self.driver, 60).until(
-                    lambda d: "upload" in d.current_url and "login" not in d.current_url
-                )
-                print("✅ Login detectado. Continuando...")
-            except:
-                print("❌ No se detectó el login a tiempo. Abortando.")
-                return False
-
-        # 2. Subir Archivo
         try:
-            print(f"📤 Subiendo archivo: {video_path}")
-            # Wait for file input to be available (up to 15 seconds)
-            file_input = WebDriverWait(self.driver, 15).until(
+            # Importar la librería aquí para evitar errores si no está instalada
+            from tiktok_uploader.upload import upload_video
+
+            print(f"🚀 Subiendo video a TikTok: {video_path}")
+            print(f"📝 Descripción: {description[:100]}...")
+
+            # La librería maneja todo: bypass anti-bot, login con cookies, upload y publicación
+            upload_video(
+                filename=os.path.abspath(video_path),
+                description=description,
+                cookies=self.cookies_file.name,
+                headless=True,  # Modo headless para CI
+                # browser='chrome'  # Por defecto usa Chrome
+            )
+
+            print("✅ Video publicado exitosamente en TikTok!")
+            return True
+
+        except ImportError:
+            print("❌ tiktok-uploader no está instalado. Ejecuta: pip install tiktok-uploader")
+            return self._fallback_upload(video_path, description)
+
+        except Exception as e:
+            print(f"❌ Error subiendo video: {e}")
+            # Intentar método fallback
+            return self._fallback_upload(video_path, description)
+
+    def _fallback_upload(self, video_path, description):
+        """
+        Método fallback usando Selenium directo si tiktok-uploader falla.
+        Solo sube el video, no publica automáticamente.
+        """
+        print("🔄 Intentando método fallback con Selenium...")
+
+        try:
+            from selenium import webdriver
+            from selenium.webdriver.chrome.service import Service
+            from selenium.webdriver.common.by import By
+            from selenium.webdriver.support.ui import WebDriverWait
+            from selenium.webdriver.support import expected_conditions as EC
+            from webdriver_manager.chrome import ChromeDriverManager
+            import time
+
+            options = webdriver.ChromeOptions()
+            options.add_argument("--disable-blink-features=AutomationControlled")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument("--headless=new")
+            options.add_argument("--window-size=1920,1080")
+
+            driver_path = ChromeDriverManager().install()
+            if "THIRD_PARTY" in driver_path:
+                driver_path = driver_path.replace("THIRD_PARTY_NOTICES.chromedriver", "chromedriver")
+            os.chmod(driver_path, 0o755)
+
+            driver = webdriver.Chrome(service=Service(driver_path), options=options)
+
+            # Inyectar cookies
+            driver.get("https://www.tiktok.com")
+            cookies_json = os.environ.get("TIKTOK_COOKIES_JSON")
+            if cookies_json:
+                cookies = json.loads(cookies_json)
+                for cookie in cookies:
+                    if 'sameSite' in cookie and cookie['sameSite'] not in ["Strict", "Lax", "None"]:
+                        del cookie['sameSite']
+                    try:
+                        driver.add_cookie(cookie)
+                    except:
+                        pass
+
+            driver.refresh()
+            time.sleep(3)
+
+            # Ir a upload
+            driver.get("https://www.tiktok.com/upload?lang=es")
+            time.sleep(5)
+
+            # Subir archivo
+            file_input = WebDriverWait(driver, 15).until(
                 EC.presence_of_element_located((By.XPATH, "//input[@type='file']"))
             )
             file_input.send_keys(os.path.abspath(video_path))
 
-            # Esperar a que se procese el video (TikTok necesita tiempo)
-            print("⏳ Esperando procesamiento de video (20s)...")
+            print("⏳ Esperando procesamiento (20s)...")
             time.sleep(20)
 
-            # 3. Poner Descripción usando JavaScript (más confiable que selectores)
-            print("✍️ Añadiendo descripción...")
-            try:
-                # TikTok Studio usa un div contenteditable o un editor de texto
-                # Intentamos múltiples selectores
-                caption_selectors = [
-                    "//div[@contenteditable='true']",
-                    "//div[contains(@class, 'editor')]//div[@contenteditable='true']",
-                    "//div[contains(@class, 'caption')]//div[@contenteditable='true']",
-                    "//div[@data-placeholder][@contenteditable='true']"
-                ]
-
-                caption_input = None
-                for selector in caption_selectors:
-                    try:
-                        caption_input = WebDriverWait(self.driver, 5).until(
-                            EC.presence_of_element_located((By.XPATH, selector))
-                        )
-                        if caption_input:
-                            break
-                    except:
-                        continue
-
-                if caption_input:
-                    caption_input.click()
-                    time.sleep(1)
-                    # Limpiar y escribir descripción
-                    caption_input.clear()
-                    caption_input.send_keys(description)
-                    print(f"✅ Descripción añadida: {description[:50]}...")
-                else:
-                    print("⚠️ No se encontró campo de descripción, continuando sin ella...")
-
-            except Exception as desc_error:
-                print(f"⚠️ Error al añadir descripción: {desc_error}")
-
-            # 4. El video se ha subido - TikTok bloquea publicación automática
-            # NOTA: TikTok tiene protecciones anti-bot que impiden hacer clic
-            # automáticamente en "Publicar". El video queda listo para publicar
-            # manualmente desde TikTok Studio.
-
-            print("✅ Video subido correctamente a TikTok Studio.")
-            print("📋 NOTA: TikTok bloquea la publicación automática por seguridad.")
-            print("👉 El video está listo en TikTok Studio > Publicaciones como borrador.")
-            print("👉 Para publicar: Abre TikTok Studio y pulsa 'Publicar' manualmente.")
-
-            # Marcar como éxito - el video está subido y listo
+            print("✅ Video subido (fallback). Requiere publicación manual.")
+            driver.quit()
             return True
 
         except Exception as e:
-            print(f"❌ Error durante la subida: {e}")
+            print(f"❌ Fallback también falló: {e}")
             return False
-            
+
     def close(self):
-        if self.driver:
-            self.driver.quit()
+        """Limpia recursos."""
+        if self.cookies_file and os.path.exists(self.cookies_file.name):
+            try:
+                os.unlink(self.cookies_file.name)
+            except:
+                pass
+
 
 if __name__ == "__main__":
     # Test rápido
     uploader = TikTokUploader()
-    # Crear un archivo dummy para probar si no existe
-    if not os.path.exists("test_video.mp4"):
-        with open("test_video.mp4", "w") as f:
-            f.write("dummy content")
-            
-    uploader.upload_video("test_video.mp4", "Test #automatización")
+
+    # Crear un video dummy para probar
+    test_video = "test_video.mp4"
+    if not os.path.exists(test_video):
+        print("⚠️ No hay video de prueba. Crea test_video.mp4")
+    else:
+        uploader.upload_video(test_video, "Test automatizado #camping #ofertas")
+
     uploader.close()

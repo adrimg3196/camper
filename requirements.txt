@@ -33,3 +33,6 @@ google-auth>=2.25.0
 # Utilidades
 python-dotenv>=1.0.0
 schedule>=1.2.0
+
+# TikTok Auto-Upload (con bypass anti-bot)
+tiktok-uploader>=0.1.0

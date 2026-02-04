@@ -9,3 +9,6 @@ webdriver-manager==4.0.1
 
 moviepy==1.0.3
 numpy
+
+# TikTok Auto-Upload (con bypass anti-bot)
+tiktok-uploader>=0.1.0

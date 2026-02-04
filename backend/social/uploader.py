@@ -337,10 +337,11 @@ class TikTokUploader:
 
             info = json.loads(status)
 
-            # Retry si hay error
-            if info.get('hasErrorText') and info.get('hasRetryBtn') and retries_done < max_retries:
+            # Retry si hay error O si hay botón Retry visible (incluso sin error text)
+            if info.get('hasRetryBtn') and retries_done < max_retries:
                 retries_done += 1
-                print(f"[PROCESS] Error detectado - Retry {retries_done}/{max_retries}")
+                reason = "error+retry" if info.get('hasErrorText') else "retry_btn_visible"
+                print(f"[PROCESS] {reason} - Retry {retries_done}/{max_retries}")
                 driver.execute_script("""
                     const btns = document.querySelectorAll('button');
                     for (const b of btns) {
@@ -348,19 +349,20 @@ class TikTokUploader:
                         if (t === 'retry' || t === 'reintentar') { b.click(); break; }
                     }
                 """)
-                time.sleep(10)
+                time.sleep(15)
                 last_status = ""
                 continue
 
-            if info.get('hasErrorText') and retries_done >= max_retries:
+            if (info.get('hasErrorText') or info.get('hasRetryBtn')) and retries_done >= max_retries:
                 print(f"[PROCESS] ERROR persistente tras {max_retries} retries")
                 return False
 
-            # Listo si Post está habilitado y sin errores
+            # Listo si Post está habilitado, sin errores, Y sin botón Retry
             if (info.get('postBtnExists') and
                     info.get('postBtnDisabled') is False and
-                    not info.get('hasErrorText')):
-                print("[PROCESS] OK - Post button habilitado")
+                    not info.get('hasErrorText') and
+                    not info.get('hasRetryBtn')):
+                print("[PROCESS] OK - Post habilitado, sin errores, sin Retry")
                 return True
 
             time.sleep(5)
@@ -429,14 +431,16 @@ class TikTokUploader:
                     url.includes('/post/'),
                 ];
 
-                // Indicadores de fallo
-                const failIndicators = [
-                    body.includes('Something went wrong'),
-                    body.includes('Algo salió mal'),
-                    body.includes('Upload failed'),
-                    body.includes('Try again'),
-                    body.includes('Reintentar'),
+                // Indicadores de fallo (específicos, evitar falsos positivos)
+                const failLabels = [
+                    'Something went wrong',
+                    'Algo salió mal',
+                    'Upload failed',
+                    'Failed to post',
+                    'Video processing failed',
                 ];
+                const failIndicators = failLabels.map(label => body.includes(label));
+                const failMatches = failLabels.filter((label, i) => failIndicators[i]);
 
                 // El editor desapareció (señal de éxito)
                 const editorGone = !document.querySelector('.public-DraftEditor-content[contenteditable="true"]');
@@ -450,6 +454,7 @@ class TikTokUploader:
                     urlChanged: url !== arguments[0],
                     successCount: successIndicators.filter(Boolean).length,
                     failCount: failIndicators.filter(Boolean).length,
+                    failMatches: failMatches,
                     editorGone: editorGone,
                     postBtnGone: postBtnGone,
                     title: document.title,
@@ -475,7 +480,7 @@ class TikTokUploader:
 
             # FALLO claro
             if page_state.get('failCount', 0) >= 1:
-                print("[VERIFY] FALLO: Error detectado post-publicación")
+                print(f"[VERIFY] FALLO: {page_state.get('failMatches', [])}")
                 print(f"[VERIFY] Body: {page_state.get('bodySnippet', '')[:300]}")
                 return False
 

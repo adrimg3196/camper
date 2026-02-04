@@ -1,11 +1,11 @@
 """
-TikTok Video Uploader usando tiktok-uploader library.
-Crea un browser_agent propio para evitar el bug de ChromeDriver path
-en webdriver-manager, y lo pasa a la librería.
+TikTok Video Uploader - Selenium directo.
+La librería tiktok-uploader no funciona con la UI actual de TikTok,
+así que usamos Selenium directamente con selectores actualizados.
 """
 import os
 import json
-import tempfile
+import time
 
 
 def _get_chrome_driver():
@@ -20,103 +20,225 @@ def _get_chrome_driver():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
 
     driver_path = ChromeDriverManager().install()
-    # Fix: webdriver-manager a veces devuelve path a THIRD_PARTY_NOTICES
     if "THIRD_PARTY" in driver_path:
         driver_path = driver_path.replace(
             "THIRD_PARTY_NOTICES.chromedriver", "chromedriver"
         )
     os.chmod(driver_path, 0o755)
 
-    return webdriver.Chrome(service=Service(driver_path), options=options)
+    driver = webdriver.Chrome(service=Service(driver_path), options=options)
+    # Anti-detección: eliminar navigator.webdriver
+    driver.execute_cdp_cmd(
+        "Page.addScriptToEvaluateOnNewDocument",
+        {"source": "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"},
+    )
+    return driver
 
 
 class TikTokUploader:
     def __init__(self):
-        self.cookies_file = None
-        self._setup_cookies()
+        self.driver = None
 
-    def _setup_cookies(self):
-        """Prepara el archivo de cookies desde la variable de entorno."""
+    def _inject_cookies(self, driver):
+        """Inyecta cookies de TikTok desde variable de entorno."""
         cookies_json = os.environ.get("TIKTOK_COOKIES_JSON")
         if not cookies_json:
             print("⚠️ No hay TIKTOK_COOKIES_JSON configurado.")
-            return
+            return False
 
-        try:
-            cookies = json.loads(cookies_json)
+        driver.get("https://www.tiktok.com")
+        time.sleep(2)
 
-            self.cookies_file = tempfile.NamedTemporaryFile(
-                mode='w', suffix='.txt', delete=False
-            )
+        cookies = json.loads(cookies_json)
+        injected = 0
+        for cookie in cookies:
+            if 'sameSite' in cookie:
+                if cookie['sameSite'] not in ["Strict", "Lax", "None"]:
+                    cookie['sameSite'] = "Lax"
+            if 'expirationDate' in cookie:
+                cookie['expiry'] = int(cookie.pop('expirationDate'))
+            for key in ['hostOnly', 'httpOnly', 'session', 'storeId', 'id']:
+                cookie.pop(key, None)
+            try:
+                driver.add_cookie(cookie)
+                injected += 1
+            except Exception:
+                pass
 
-            # Formato Netscape cookies.txt
-            self.cookies_file.write("# Netscape HTTP Cookie File\n")
-            for cookie in cookies:
-                domain = cookie.get('domain', '.tiktok.com')
-                if not domain.startswith('.'):
-                    domain = '.' + domain
+        print(f"🍪 {injected}/{len(cookies)} cookies inyectadas.")
+        driver.refresh()
+        time.sleep(3)
+        return True
 
-                flag = "TRUE" if domain.startswith('.') else "FALSE"
-                path = cookie.get('path', '/')
-                secure = "TRUE" if cookie.get('secure', False) else "FALSE"
-                expiry = str(int(cookie.get('expirationDate', 0)))
-                name = cookie.get('name', '')
-                value = cookie.get('value', '')
+    def _verify_session(self, driver):
+        """Verifica que la sesión está activa."""
+        driver.get("https://www.tiktok.com/tiktokstudio/upload?from=upload&lang=es")
+        time.sleep(5)
 
-                self.cookies_file.write(
-                    f"{domain}\t{flag}\t{path}\t{secure}\t{expiry}\t{name}\t{value}\n"
-                )
+        current_url = driver.current_url
+        print(f"📍 URL actual: {current_url}")
 
-            self.cookies_file.close()
-            print(f"✅ Cookies preparadas: {len(cookies)} cookies cargadas")
+        if "login" in current_url:
+            print("⚠️ Sesión no activa, reintentando...")
+            driver.get("https://www.tiktok.com")
+            time.sleep(2)
+            driver.refresh()
+            time.sleep(3)
+            driver.get("https://www.tiktok.com/tiktokstudio/upload?from=upload&lang=es")
+            time.sleep(5)
+            if "login" in driver.current_url:
+                print("❌ Cookies expiradas. No se pudo iniciar sesión.")
+                return False
 
-        except Exception as e:
-            print(f"❌ Error preparando cookies: {e}")
-            self.cookies_file = None
+        print("✅ Sesión verificada.")
+        return True
 
     def upload_video(self, video_path, description):
-        """Sube y publica un video a TikTok usando tiktok-uploader."""
-        if not self.cookies_file:
-            print("❌ No hay cookies configuradas.")
-            return False
+        """Sube y publica un video a TikTok usando Selenium."""
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.support.ui import WebDriverWait
+        from selenium.webdriver.support import expected_conditions as EC
+        from selenium.webdriver.common.keys import Keys
+
+        print(f"🚀 Subiendo video a TikTok: {video_path}")
+        print(f"📝 Descripción: {description[:100]}...")
 
         try:
-            from tiktok_uploader.upload import upload_video
-
-            print(f"🚀 Subiendo video a TikTok: {video_path}")
-            print(f"📝 Descripción: {description[:100]}...")
-
-            # Crear browser con ChromeDriver path correcto
             driver = _get_chrome_driver()
-            print("✅ Chrome browser creado correctamente.")
+            print("✅ Chrome browser creado.")
 
-            # Pasar browser_agent para que la librería no cree su propio driver
-            upload_video(
-                filename=os.path.abspath(video_path),
-                description=description,
-                cookies=self.cookies_file.name,
-                browser_agent=driver,
+            # Inyectar cookies y verificar sesión
+            if not self._inject_cookies(driver):
+                driver.quit()
+                return False
+
+            if not self._verify_session(driver):
+                driver.quit()
+                return False
+
+            # Buscar el input de archivo (puede estar oculto)
+            print("📤 Buscando input de archivo...")
+            file_input = WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.XPATH, "//input[@type='file']"))
             )
+            file_input.send_keys(os.path.abspath(video_path))
+            print("✅ Archivo enviado. Esperando procesamiento...")
 
-            print("✅ Video publicado exitosamente en TikTok!")
-            return True
+            # Esperar a que se procese el video (30s)
+            time.sleep(30)
 
-        except ImportError:
-            print("❌ tiktok-uploader no instalado.")
-            return False
+            # Capturar screenshot para debug
+            driver.save_screenshot("/tmp/tiktok_after_upload.png")
+            print(f"📸 Screenshot guardado en /tmp/tiktok_after_upload.png")
+            print(f"📍 URL: {driver.current_url}")
+            print(f"📄 Título: {driver.title}")
+
+            # Intentar añadir descripción
+            try:
+                caption_selectors = [
+                    "//div[@contenteditable='true']",
+                    "//div[contains(@class,'notranslate')][@contenteditable='true']",
+                    "//div[@data-placeholder][@contenteditable='true']",
+                    "//span[@data-text='true']",
+                ]
+                caption_el = None
+                for sel in caption_selectors:
+                    try:
+                        caption_el = WebDriverWait(driver, 5).until(
+                            EC.presence_of_element_located((By.XPATH, sel))
+                        )
+                        if caption_el:
+                            break
+                    except Exception:
+                        continue
+
+                if caption_el:
+                    caption_el.click()
+                    time.sleep(0.5)
+                    # Seleccionar todo y borrar
+                    caption_el.send_keys(Keys.CONTROL + "a")
+                    caption_el.send_keys(Keys.BACKSPACE)
+                    time.sleep(0.5)
+                    caption_el.send_keys(description)
+                    print(f"✅ Descripción añadida.")
+                else:
+                    print("⚠️ No se encontró campo de descripción.")
+            except Exception as e:
+                print(f"⚠️ Error en descripción: {e}")
+
+            # Intentar hacer clic en Publicar
+            print("🔍 Buscando botón Publicar...")
+            publish_selectors = [
+                "//button[@data-e2e='post_video_button']",
+                "//button[contains(text(),'Publicar')]",
+                "//button[contains(text(),'Post')]",
+                "//button[contains(text(),'Subir')]",
+                "//div[contains(@class,'btn-post')]//button",
+                "//button[contains(@class,'TUXButton--primary') and contains(@class,'TUXButton--large')]",
+            ]
+
+            published = False
+            for sel in publish_selectors:
+                try:
+                    btn = WebDriverWait(driver, 5).until(
+                        EC.element_to_be_clickable((By.XPATH, sel))
+                    )
+                    btn.click()
+                    print(f"✅ Botón Publicar clickeado: {sel}")
+                    published = True
+                    break
+                except Exception:
+                    continue
+
+            if not published:
+                # Fallback: buscar botones por JavaScript
+                print("🔍 Buscando botón por JavaScript...")
+                result = driver.execute_script("""
+                    const buttons = document.querySelectorAll('button');
+                    for (const btn of buttons) {
+                        const text = btn.textContent.toLowerCase();
+                        if (text.includes('publicar') || text.includes('post') ||
+                            text.includes('subir') || text.includes('upload')) {
+                            btn.click();
+                            return 'clicked: ' + btn.textContent.trim();
+                        }
+                    }
+                    // Listar todos los botones para debug
+                    return 'buttons: ' + Array.from(buttons).map(b => b.textContent.trim()).filter(t => t).join(' | ');
+                """)
+                print(f"🔍 JS resultado: {result}")
+                if result and result.startswith('clicked'):
+                    published = True
+
+            # Esperar confirmación
+            if published:
+                time.sleep(10)
+                driver.save_screenshot("/tmp/tiktok_after_publish.png")
+                print("✅ Video publicado exitosamente en TikTok!")
+            else:
+                driver.save_screenshot("/tmp/tiktok_no_publish_btn.png")
+                print("⚠️ No se encontró botón Publicar. Video subido como borrador.")
+
+            driver.quit()
+            return published
 
         except Exception as e:
             print(f"❌ Error subiendo video: {e}")
             import traceback
             traceback.print_exc()
+            try:
+                driver.quit()
+            except Exception:
+                pass
             return False
 
     def close(self):
         """Limpia recursos."""
-        if self.cookies_file and os.path.exists(self.cookies_file.name):
+        if self.driver:
             try:
-                os.unlink(self.cookies_file.name)
-            except:
+                self.driver.quit()
+            except Exception:
                 pass

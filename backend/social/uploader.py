@@ -164,45 +164,43 @@ class TikTokUploader:
             print(f"[OVERLAY] Error: {e}")
 
     def _wait_for_video_processing(self, driver, timeout=120):
-        """Espera a que TikTok termine de procesar el video."""
+        """Espera a que TikTok termine de procesar el video. Hace retry si hay error."""
         print(f"[PROCESS] Esperando procesamiento del video (max {timeout}s)...")
         start = time.time()
         last_status = ""
+        retries_done = 0
+        max_retries = 3
 
         while time.time() - start < timeout:
             status = driver.execute_script("""
-                // Buscar indicadores de progreso/procesamiento
                 const progress = document.querySelector('[class*="progress"]');
                 const processing = document.querySelector('[class*="processing"]');
                 const uploading = document.querySelector('[class*="uploading"]');
-                const error = document.querySelector('[class*="error"]');
                 const postBtn = document.querySelector('button[data-e2e="post_video_button"]');
+                const retryBtn = document.querySelector('button') ?
+                    Array.from(document.querySelectorAll('button')).find(b =>
+                        b.textContent.trim().toLowerCase() === 'retry') : null;
+                // Buscar error SOLO en textos especificos, no en clases CSS
+                const bodyText = document.body.innerText;
+                const hasErrorText = bodyText.includes('Something went wrong') ||
+                                     bodyText.includes('Upload failed') ||
+                                     bodyText.includes('Algo salió mal');
 
                 let info = {
                     hasProgress: !!progress,
                     hasProcessing: !!processing,
                     hasUploading: !!uploading,
-                    hasError: !!error,
-                    errorText: error ? error.textContent.trim().substring(0, 100) : '',
+                    hasErrorText: hasErrorText,
+                    hasRetryBtn: !!retryBtn,
                     postBtnExists: !!postBtn,
                     postBtnDisabled: postBtn ? postBtn.disabled : null,
                     postBtnText: postBtn ? postBtn.textContent.trim() : ''
                 };
 
-                // Buscar cualquier texto que indique porcentaje
-                const body = document.body.innerText;
-                const pctMatch = body.match(/(\\d+)%/);
+                const pctMatch = bodyText.match(/(\\d+)%/);
                 if (pctMatch) info.percentage = pctMatch[1];
 
-                // Buscar texto de estado
-                const statusTexts = ['processing', 'uploading', 'compressing',
-                                     'procesando', 'subiendo', 'comprimiendo'];
-                for (const s of statusTexts) {
-                    if (body.toLowerCase().includes(s)) {
-                        info.statusText = s;
-                        break;
-                    }
-                }
+                if (bodyText.toLowerCase().includes('uploaded')) info.uploaded = true;
 
                 return JSON.stringify(info);
             """)
@@ -213,20 +211,39 @@ class TikTokUploader:
 
             info = json.loads(status)
 
-            # Si hay error, abortar
-            if info.get('hasError') and info.get('errorText'):
-                print(f"[PROCESS] ERROR detectado: {info['errorText']}")
+            # Si hay error con boton Retry, clickearlo
+            if info.get('hasErrorText') and info.get('hasRetryBtn') and retries_done < max_retries:
+                retries_done += 1
+                print(f"[PROCESS] Error detectado, clickeando Retry ({retries_done}/{max_retries})...")
+                driver.execute_script("""
+                    const btns = document.querySelectorAll('button');
+                    for (const b of btns) {
+                        if (b.textContent.trim().toLowerCase() === 'retry') {
+                            b.click();
+                            break;
+                        }
+                    }
+                """)
+                time.sleep(10)
+                last_status = ""  # Reset para volver a logear
+                continue
+
+            # Si hay error sin retry o ya agotamos retries
+            if info.get('hasErrorText') and retries_done >= max_retries:
+                print(f"[PROCESS] ERROR persistente tras {max_retries} retries")
                 return False
 
-            # Si el boton Post existe y NO esta disabled, el video esta listo
-            if info.get('postBtnExists') and info.get('postBtnDisabled') is False:
-                print("[PROCESS] Video procesado - boton Post habilitado")
+            # Si el boton Post existe, NO esta disabled, y ya se subio
+            if (info.get('postBtnExists') and
+                    info.get('postBtnDisabled') is False and
+                    not info.get('hasErrorText')):
+                print("[PROCESS] Video procesado - boton Post habilitado, sin errores")
                 return True
 
             time.sleep(5)
 
-        print(f"[PROCESS] Timeout {timeout}s - Publicando de todas formas")
-        return True
+        print(f"[PROCESS] Timeout {timeout}s")
+        return False
 
     def upload_video(self, video_path, description):
         """Sube y publica un video a TikTok usando Selenium."""
@@ -326,6 +343,12 @@ class TikTokUploader:
             # Screenshot post-procesamiento
             driver.save_screenshot("/tmp/tiktok_after_processing.png")
             print(f"[UPLOAD] URL: {driver.current_url}")
+
+            if not processing_ok:
+                print("[UPLOAD] ABORTANDO: El video no se proceso correctamente")
+                driver.save_screenshot("/tmp/tiktok_processing_failed.png")
+                driver.quit()
+                return False
 
             # Escribir descripcion
             try:

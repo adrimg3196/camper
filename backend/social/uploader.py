@@ -239,6 +239,51 @@ class TikTokUploader:
 
         return None
 
+    def _dismiss_overlays(self, driver):
+        """Cierra overlays de tutorial (react-joyride) y popups modales."""
+        try:
+            result = driver.execute_script("""
+                let dismissed = [];
+                // 1. Cerrar react-joyride overlay
+                const joyride = document.querySelector('.react-joyride__overlay');
+                if (joyride) {
+                    joyride.style.display = 'none';
+                    joyride.style.pointerEvents = 'none';
+                    dismissed.push('joyride-overlay');
+                }
+                // 2. Cerrar todo el contenedor joyride
+                const joyrideContainers = document.querySelectorAll('[class*="react-joyride"]');
+                joyrideContainers.forEach(el => {
+                    el.style.display = 'none';
+                    el.style.pointerEvents = 'none';
+                });
+                if (joyrideContainers.length > 0) dismissed.push('joyride-containers:' + joyrideContainers.length);
+                // 3. Buscar y clickear botones de "Skip" o "Got it" del tour
+                const buttons = document.querySelectorAll('button');
+                for (const btn of buttons) {
+                    const text = btn.textContent.toLowerCase().trim();
+                    if (text === 'skip' || text === 'got it' || text === 'close' ||
+                        text === 'omitir' || text === 'cerrar' || text === 'entendido' ||
+                        text === 'skip tour' || text === 'dismiss') {
+                        btn.click();
+                        dismissed.push('clicked:' + text);
+                    }
+                }
+                // 4. Cerrar cualquier modal overlay genérico
+                const modals = document.querySelectorAll('[class*="overlay"][style*="pointer-events"]');
+                modals.forEach(m => {
+                    m.style.display = 'none';
+                    m.style.pointerEvents = 'none';
+                });
+                if (modals.length > 0) dismissed.push('modals:' + modals.length);
+                return dismissed.join(', ') || 'none';
+            """)
+            if result != 'none':
+                print(f"🔇 Overlays cerrados: {result}")
+                time.sleep(1)
+        except Exception as e:
+            print(f"⚠️ Error cerrando overlays: {e}")
+
     def upload_video(self, video_path, description):
         """Sube y publica un video a TikTok usando Selenium."""
         from selenium.webdriver.common.by import By
@@ -317,43 +362,40 @@ class TikTokUploader:
             except Exception:
                 pass
 
+            # Cerrar overlay de tutorial (react-joyride) si existe
+            self._dismiss_overlays(driver)
+
             # Capturar screenshot para debug
             driver.save_screenshot("/tmp/tiktok_after_upload.png")
             print(f"📸 Screenshot post-upload: /tmp/tiktok_after_upload.png")
             print(f"📍 URL: {driver.current_url}")
             print(f"📄 Título: {driver.title}")
 
-            # Intentar añadir descripción
+            # Intentar añadir descripción via JavaScript (evita overlay issues)
             try:
-                caption_selectors = [
-                    "//div[@contenteditable='true']",
-                    "//div[contains(@class,'notranslate')][@contenteditable='true']",
-                    "//div[@data-placeholder][@contenteditable='true']",
-                    "//span[@data-text='true']",
-                    "//div[contains(@class,'public-DraftEditor-content')]",
-                    "//div[@role='textbox']",
-                ]
-                caption_el = None
-                for sel in caption_selectors:
-                    try:
-                        caption_el = WebDriverWait(driver, 5).until(
-                            EC.presence_of_element_located((By.XPATH, sel))
-                        )
-                        if caption_el:
-                            break
-                    except Exception:
-                        continue
-
-                if caption_el:
-                    caption_el.click()
-                    time.sleep(0.5)
-                    caption_el.send_keys(Keys.CONTROL + "a")
-                    caption_el.send_keys(Keys.BACKSPACE)
-                    time.sleep(0.5)
-                    caption_el.send_keys(description)
-                    print("✅ Descripción añadida.")
-                else:
-                    print("⚠️ No se encontró campo de descripción.")
+                desc_result = driver.execute_script("""
+                    // Buscar el editor de descripción
+                    const editor = document.querySelector(
+                        '.public-DraftEditor-content[contenteditable="true"]'
+                    ) || document.querySelector(
+                        'div[contenteditable="true"][role="combobox"]'
+                    ) || document.querySelector(
+                        'div[contenteditable="true"]'
+                    );
+                    if (editor) {
+                        editor.focus();
+                        // Seleccionar todo y borrar
+                        document.execCommand('selectAll', false, null);
+                        document.execCommand('delete', false, null);
+                        // Insertar texto
+                        document.execCommand('insertText', false, arguments[0]);
+                        // Disparar evento input
+                        editor.dispatchEvent(new Event('input', { bubbles: true }));
+                        return 'ok: ' + editor.textContent.substring(0, 50);
+                    }
+                    return 'not_found';
+                """, description)
+                print(f"📝 Descripción resultado: {desc_result}")
             except Exception as e:
                 print(f"⚠️ Error en descripción: {e}")
 
@@ -385,15 +427,28 @@ class TikTokUploader:
                 print("🔍 Buscando botón por JavaScript...")
                 result = driver.execute_script("""
                     const buttons = document.querySelectorAll('button');
+                    // Listar todos los botones para debug
+                    const allBtns = Array.from(buttons).map(b => b.textContent.trim()).filter(t => t);
+                    console.log('All buttons:', allBtns);
+                    // Prioridad: "Post" exacto primero (es el botón de publicar)
                     for (const btn of buttons) {
-                        const text = btn.textContent.toLowerCase();
-                        if (text.includes('publicar') || text.includes('post') ||
-                            text.includes('subir') || text.includes('upload')) {
+                        const text = btn.textContent.trim().toLowerCase();
+                        // Buscar botón Post/Publicar, EXCLUYENDO Upload (que es subir otro)
+                        if (text === 'post' || text === 'publicar') {
                             btn.click();
                             return 'clicked: ' + btn.textContent.trim();
                         }
                     }
-                    return 'buttons: ' + Array.from(buttons).map(b => b.textContent.trim()).filter(t => t).join(' | ');
+                    // Segunda prioridad: contiene post/publicar
+                    for (const btn of buttons) {
+                        const text = btn.textContent.trim().toLowerCase();
+                        if ((text.includes('post') || text.includes('publicar')) &&
+                            !text.includes('upload') && !text.includes('draft')) {
+                            btn.click();
+                            return 'clicked: ' + btn.textContent.trim();
+                        }
+                    }
+                    return 'buttons: ' + allBtns.join(' | ');
                 """)
                 print(f"🔍 JS resultado: {result}")
                 if result and result.startswith('clicked'):

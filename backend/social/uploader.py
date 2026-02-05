@@ -203,12 +203,14 @@ class TikTokUploader:
         headers["authorization"] = authorization
 
         r = session.get(f"{vod_url}?{request_params}", headers=headers)
-        if r.status_code != 200:
-            print(f"[API] ERROR: ApplyUploadInner status={r.status_code}")
-            print(f"[API] Response: {r.text[:500]}")
+        print(f"[API] ApplyUploadInner status={r.status_code}")
+        resp_json = r.json()
+        print(f"[API] ApplyUploadInner keys: {list(resp_json.keys())}")
+        if r.status_code != 200 or "Result" not in resp_json:
+            print(f"[API] ERROR: ApplyUploadInner response: {json.dumps(resp_json, ensure_ascii=False)[:500]}")
             return False
 
-        upload_node = r.json()["Result"]["InnerUploadAddress"]["UploadNodes"][0]
+        upload_node = resp_json["Result"]["InnerUploadAddress"]["UploadNodes"][0]
         video_id = upload_node["Vid"]
         store_uri = upload_node["StoreInfos"][0]["StoreUri"]
         video_auth = upload_node["StoreInfos"][0]["Auth"]

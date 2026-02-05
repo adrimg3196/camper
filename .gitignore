@@ -33,3 +33,8 @@ video_temp.mp4
 backend/tiktok_profile/
 .env*.local
 .env.vercel
+
+# Remotion
+video/out/
+video/public/product.jpg
+backend/temp_assets/

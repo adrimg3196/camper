@@ -335,7 +335,12 @@ class TikTokUploader:
             }],
         }
 
-        mstoken = session.cookies.get("msToken", "")
+        # Buscar msToken (puede haber múltiples para diferentes dominios)
+        mstoken = ""
+        for cookie in session.cookies:
+            if cookie.name == "msToken":
+                mstoken = cookie.value
+                break
         publish_params = {
             "app_name": "tiktok_web",
             "channel": "tiktok_web",

@@ -1,4 +1,5 @@
 requests==2.31.0
+requests-auth-aws-sigv4==0.7.0
 beautifulsoup4==4.12.3
 python-dotenv==1.0.1
 fake-useragent==1.4.0

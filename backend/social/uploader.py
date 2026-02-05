@@ -174,7 +174,10 @@ class TikTokUploader:
 
         auth_json = r.json()
         print(f"[API] upload/auth keys: {list(auth_json.keys())}")
+        store_region = auth_json.get("store_region", "unknown")
+        print(f"[API] store_region: {store_region}")
         token_data = auth_json.get("video_token_v5", {})
+        print(f"[API] video_token_v5 keys: {list(token_data.keys())}")
         access_key = token_data.get("access_key_id")
         secret_key = token_data.get("secret_acess_key")  # Nota: typo de TikTok
         session_token = token_data.get("session_token")
@@ -194,7 +197,10 @@ class TikTokUploader:
 
         # === PASO 4: Inicializar upload en ByteVcloud ===
         print("[API] Paso 4: Inicializando upload en ByteVcloud...")
-        vod_url = "https://vod-us-east-1.bytevcloudapi.com/"
+        # Usar la región del store_region o fallback a us-east-1
+        vod_region = store_region if store_region != "unknown" else "us-east-1"
+        vod_url = f"https://vod-{vod_region}.bytevcloudapi.com/"
+        print(f"[API] VOD URL: {vod_url}")
         request_params = (f'Action=ApplyUploadInner&FileSize={file_size}&FileType=video'
                           f'&IsInner=1&SpaceName=tiktok&Version=2020-11-19&s=zdxefu8qvq8')
 
@@ -205,8 +211,9 @@ class TikTokUploader:
             "x-amz-date": amzdate,
             "x-amz-security-token": session_token,
         }
-        signature = _aws_signature(access_key, secret_key, request_params, headers)
-        authorization = (f"AWS4-HMAC-SHA256 Credential={access_key}/{datestamp}/us-east-1/vod/aws4_request, "
+        signature = _aws_signature(access_key, secret_key, request_params, headers,
+                                   region=vod_region)
+        authorization = (f"AWS4-HMAC-SHA256 Credential={access_key}/{datestamp}/{vod_region}/vod/aws4_request, "
                          f"SignedHeaders=x-amz-date;x-amz-security-token, Signature={signature}")
         headers["authorization"] = authorization
 
@@ -296,8 +303,8 @@ class TikTokUploader:
             "x-amz-security-token": session_token,
         }
         signature = _aws_signature(access_key, secret_key, request_params, headers,
-                                   method="POST", payload=commit_data)
-        authorization = (f"AWS4-HMAC-SHA256 Credential={access_key}/{datestamp}/us-east-1/vod/aws4_request, "
+                                   method="POST", payload=commit_data, region=vod_region)
+        authorization = (f"AWS4-HMAC-SHA256 Credential={access_key}/{datestamp}/{vod_region}/vod/aws4_request, "
                          f"SignedHeaders=x-amz-content-sha256;x-amz-date;x-amz-security-token, "
                          f"Signature={signature}")
         headers["authorization"] = authorization

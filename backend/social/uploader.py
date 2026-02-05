@@ -58,27 +58,28 @@ def _crc32(content):
     return ("%X" % (prev & 0xFFFFFFFF)).lower().zfill(8)
 
 
-def _extract_session_ids(cookies_json_str):
-    """Extrae todas las posibles session IDs de TIKTOK_COOKIES_JSON."""
-    session_ids = []
+def _extract_all_cookies(cookies_json_str):
+    """Extrae TODAS las cookies de TIKTOK_COOKIES_JSON."""
+    all_cookies = []
+    session_id = None
     try:
         cookies = json.loads(cookies_json_str)
-        # Prioridad: sessionid > sessionid_ss > sid_tt
-        priority_names = ['sessionid', 'sessionid_ss', 'sid_tt']
-        for target_name in priority_names:
-            for cookie in cookies:
-                name = cookie.get('name', '')
-                if name == target_name:
-                    value = cookie.get('value', '')
-                    if value and value not in [s[1] for s in session_ids]:
-                        session_ids.append((name, value))
-        # Log
-        print(f"[COOKIES] Session cookies encontradas: {[s[0] for s in session_ids]}")
-        for name, val in session_ids:
-            print(f"[COOKIES]   {name}: {val[:8]}...{val[-4:] if len(val) > 8 else val}")
+        for cookie in cookies:
+            name = cookie.get('name', '')
+            value = cookie.get('value', '')
+            domain = cookie.get('domain', '.tiktok.com')
+            if name and value:
+                all_cookies.append((name, value, domain))
+                if name == 'sessionid':
+                    session_id = value
+        print(f"[COOKIES] Total cookies: {len(all_cookies)}")
+        if session_id:
+            print(f"[COOKIES] sessionid: {session_id[:8]}...{session_id[-4:]}")
+        else:
+            print("[COOKIES] WARNING: No se encontró sessionid")
     except Exception as e:
         print(f"[COOKIES] Error parseando cookies: {e}")
-    return session_ids
+    return all_cookies, session_id
 
 
 class TikTokUploader:
@@ -86,15 +87,7 @@ class TikTokUploader:
 
     def __init__(self):
         self.session_id = None
-
-    def _get_session_ids(self):
-        """Obtiene todas las session IDs de las cookies del entorno."""
-        cookies_json = os.environ.get("TIKTOK_COOKIES_JSON")
-        if not cookies_json:
-            print("[AUTH] No hay TIKTOK_COOKIES_JSON")
-            return []
-
-        return _extract_session_ids(cookies_json)
+        self.all_cookies = []
 
     def upload_video(self, video_path, description):
         """Sube y publica un video a TikTok usando la API directa."""
@@ -111,36 +104,38 @@ class TikTokUploader:
             print("[UPLOAD] ERROR: Archivo muy pequeño")
             return False
 
-        # Obtener todas las session IDs y probar cada una
-        session_ids = self._get_session_ids()
-        if not session_ids:
-            print("[AUTH] ❌ ERROR CRÍTICO: No hay session IDs en las cookies.")
-            print("[AUTH] ❌ Necesitas actualizar TIKTOK_COOKIES_JSON con cookies frescas.")
-            print("[AUTH] ❌ Pasos: 1) Inicia sesión en tiktok.com 2) Exporta cookies con 'Get cookies.txt' 3) Actualiza el secreto en GitHub")
+        # Obtener TODAS las cookies
+        cookies_json = os.environ.get("TIKTOK_COOKIES_JSON")
+        if not cookies_json:
+            print("[AUTH] No hay TIKTOK_COOKIES_JSON")
             return False
 
-        for cookie_name, session_id in session_ids:
-            print(f"\n[AUTH] Probando cookie '{cookie_name}': {session_id[:8]}...")
-            try:
-                result = self._upload_via_api(session_id, video_path, description)
-                if result:
-                    return True
-                print(f"[AUTH] Cookie '{cookie_name}' no funcionó, probando siguiente...")
-            except Exception as e:
-                print(f"[AUTH] Cookie '{cookie_name}' error: {e}")
-                continue
+        self.all_cookies, self.session_id = _extract_all_cookies(cookies_json)
+        if not self.session_id:
+            print("[AUTH] ERROR: No se encontró sessionid en las cookies")
+            return False
 
-        print("\n[AUTH] ❌ TODAS las cookies de sesión fallaron.")
-        print("[AUTH] ❌ Las cookies han EXPIRADO. Necesitas renovarlas:")
-        print("[AUTH] ❌ 1) Abre TikTok en tu navegador e inicia sesión")
-        print("[AUTH] ❌ 2) Usa la extensión 'Get cookies.txt' para exportar cookies")
-        print("[AUTH] ❌ 3) Actualiza el secreto TIKTOK_COOKIES_JSON en GitHub Settings > Secrets")
+        try:
+            result = self._upload_via_api(video_path, description)
+            if result:
+                return True
+        except Exception as e:
+            print(f"[AUTH] Error: {e}")
+            import traceback
+            traceback.print_exc()
+
+        print("\n[AUTH] La subida falló. Las cookies pueden haber EXPIRADO.")
+        print("[AUTH] 1) Abre TikTok en tu navegador e inicia sesión")
+        print("[AUTH] 2) Exporta las cookies y actualiza TIKTOK_COOKIES_JSON en GitHub")
         return False
 
-    def _upload_via_api(self, session_id, video_path, description):
+    def _upload_via_api(self, video_path, description):
         """Upload completo via API interna de TikTok."""
         session = requests.Session()
-        session.cookies.set("sessionid", session_id, domain=".tiktok.com")
+        # Cargar TODAS las cookies, no solo sessionid
+        for name, value, domain in self.all_cookies:
+            session.cookies.set(name, value, domain=domain)
+        print(f"[API] Cookies cargadas: {len(self.all_cookies)}")
         session.headers.update({
             'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
                           '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',

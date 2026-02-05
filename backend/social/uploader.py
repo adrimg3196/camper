@@ -141,6 +141,11 @@ class TikTokUploader:
                           '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         })
 
+        # === PASO 0: Visitar página de upload (establece cookies necesarias) ===
+        print("[API] Paso 0: Visitando /upload/...")
+        r = session.get("https://www.tiktok.com/upload/")
+        print(f"[API] /upload/ status={r.status_code}")
+
         # === PASO 1: Verificar sesión ===
         print("[API] Paso 1: Verificando sesión...")
         url = "https://www.tiktok.com/passport/web/account/info/"
@@ -167,7 +172,9 @@ class TikTokUploader:
             print(f"[API] ERROR: upload/auth status={r.status_code}")
             return False
 
-        token_data = r.json().get("video_token_v5", {})
+        auth_json = r.json()
+        print(f"[API] upload/auth keys: {list(auth_json.keys())}")
+        token_data = auth_json.get("video_token_v5", {})
         access_key = token_data.get("access_key_id")
         secret_key = token_data.get("secret_acess_key")  # Nota: typo de TikTok
         session_token = token_data.get("session_token")
@@ -175,8 +182,9 @@ class TikTokUploader:
         if not all([access_key, secret_key, session_token]):
             print(f"[API] ERROR: credenciales AWS incompletas")
             print(f"[API] Keys: ak={'yes' if access_key else 'no'}, sk={'yes' if secret_key else 'no'}, st={'yes' if session_token else 'no'}")
+            print(f"[API] auth response: {json.dumps(auth_json, ensure_ascii=False)[:500]}")
             return False
-        print("[API] Credenciales AWS obtenidas")
+        print(f"[API] Credenciales AWS: ak={access_key[:10]}... sk_len={len(secret_key)} st_len={len(session_token)}")
 
         # === PASO 3: Leer video ===
         with open(video_path, "rb") as f:

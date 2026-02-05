@@ -39,9 +39,9 @@ export const DealVideo: React.FC<DealVideoProps> = (props) => {
         />
       </Sequence>
 
-      {/* Layer 4: Call to action (from 10s) */}
+      {/* Layer 4: Call to action + affiliate link (from 10s) */}
       <Sequence from={Math.round(fps * 10)} name="CTA">
-        <CallToAction />
+        <CallToAction affiliateUrl={props.affiliateUrl} />
       </Sequence>
 
       {/* Layer 5: Persistent watermark (always) */}

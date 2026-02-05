@@ -20,6 +20,7 @@ export const RemotionRoot: React.FC = () => {
         discount: 27,
         imageUrl: "https://m.media-amazon.com/images/I/71RJn7QLZAL._AC_SL1500_.jpg",
         category: "cocina-camping",
+        affiliateUrl: "https://www.amazon.es/dp/B072K5C973?tag=camperdeals-21",
       }}
     />
   );

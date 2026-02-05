@@ -1,3 +1,4 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -8,6 +9,14 @@ class AmazonScraper:
     def __init__(self):
         self.ua = UserAgent()
         self.base_url = "https://www.amazon.es"
+        self.partner_tag = os.environ.get('AMAZON_PARTNER_TAG', 'camperdeals-21')
+
+    def _build_affiliate_url(self, url, asin=None):
+        """Genera URL de afiliado con el tag de Amazon Associates."""
+        if asin:
+            return f"{self.base_url}/dp/{asin}?tag={self.partner_tag}"
+        sep = '&' if '?' in url else '?'
+        return f"{url}{sep}tag={self.partner_tag}"
 
     def get_headers(self):
         return {
@@ -37,7 +46,7 @@ class AmazonScraper:
 
     def get_mock_deals(self):
         """Devuelve ofertas reales para asegurar que las fotos y links funcionen."""
-        return [
+        deals = [
             {
                 "id": "mock_1",
                 "title": "Lixada Estufa de Camping Gas Portátil",
@@ -63,6 +72,12 @@ class AmazonScraper:
                 "category": "mochilas"
             }
         ]
+        # Añadir affiliate_url a todos los deals
+        for deal in deals:
+            deal['affiliate_url'] = self._build_affiliate_url(
+                deal['url'], deal.get('asin')
+            )
+        return deals
 
 if __name__ == "__main__":
     scraper = AmazonScraper()

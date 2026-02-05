@@ -84,6 +84,7 @@ class SocialManager:
         image_filename = self._download_product_image(image_url, deal_data.get('id'))
 
         # 2. Preparar props
+        affiliate_url = deal_data.get('affiliate_url') or deal_data.get('url') or ''
         props = {
             "title": title[:80],
             "imageUrl": image_filename,
@@ -94,6 +95,8 @@ class SocialManager:
             props["originalPrice"] = float(original_price)
         if discount:
             props["discount"] = int(discount)
+        if affiliate_url:
+            props["affiliateUrl"] = affiliate_url
 
         # Escribir props a archivo temporal (evita problemas de shell escaping)
         props_path = os.path.join(self.temp_dir, "remotion_props.json")
@@ -131,7 +134,16 @@ class SocialManager:
 
     def upload_to_tiktok(self, video_path, deal_data):
         """Sube a TikTok via API."""
-        caption = f"{deal_data.get('marketing_title') or deal_data.get('title')} 🔥 Link en bio! #camping #ofertas"
+        title = deal_data.get('marketing_title') or deal_data.get('title') or ''
+        affiliate_url = deal_data.get('affiliate_url') or deal_data.get('url') or ''
+
+        # Construir caption con link de afiliado
+        parts = [f"{title} 🔥"]
+        if affiliate_url:
+            parts.append(f"🛒 {affiliate_url}")
+        parts.append("#camping #ofertas #amazon #outdoor")
+        caption = " ".join(parts)
+
         print(f"   🚀 Iniciando subida a TikTok: {caption}")
 
         success = self.uploader.upload_video(video_path, caption)

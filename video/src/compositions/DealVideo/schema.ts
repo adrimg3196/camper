@@ -8,6 +8,7 @@ export const dealVideoSchema = z.object({
   discount: z.number().nullable().optional(),
   imageUrl: z.string(),
   category: z.string().default("camping"),
+  affiliateUrl: z.string().optional(),
 });
 
 export type DealVideoProps = z.infer<typeof dealVideoSchema>;

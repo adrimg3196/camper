@@ -45,30 +45,30 @@ class AmazonScraper:
             return self.get_mock_deals()
 
     def get_mock_deals(self):
-        """Devuelve ofertas reales para asegurar que las fotos y links funcionen."""
+        """Devuelve ofertas reales verificadas en Amazon.es con imágenes y ASINs correctos."""
         deals = [
             {
                 "id": "mock_1",
-                "title": "Lixada Estufa de Camping Gas Portátil",
-                "price": 18.99,
-                "original_price": 25.99,
-                "discount": 27,
-                "image_url": "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&q=80&w=1000",
-                "url": "https://www.amazon.es/dp/B072K5C973",
-                "asin": "B072K5C973",
-                "rating": 4.6,
+                "title": "Lixada GR1 3500W Hornillo Camping Gas Portátil Plegable",
+                "price": 14.99,
+                "original_price": 19.99,
+                "discount": 25,
+                "image_url": "https://m.media-amazon.com/images/I/61jlrkrWhiL._AC_SL1000_.jpg",
+                "url": "https://www.amazon.es/dp/B06ZYX95PL",
+                "asin": "B06ZYX95PL",
+                "rating": 4.3,
                 "category": "cocina-camping"
             },
             {
                 "id": "mock_2",
-                "title": "Trekking Mochila 50L Impermeable",
-                "price": 45.50,
-                "original_price": 65.00,
-                "discount": 30,
-                "image_url": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&q=80&w=1000",
-                "url": "https://www.amazon.es/dp/B07F2Y3N9F",
-                "asin": "B07F2Y3N9F",
-                "rating": 4.7,
+                "title": "MOUNTAINTOP Mochila Trekking 50L Impermeable Senderismo",
+                "price": 43.99,
+                "original_price": 59.99,
+                "discount": 27,
+                "image_url": "https://m.media-amazon.com/images/I/71p+Za+EGBL._AC_SL1500_.jpg",
+                "url": "https://www.amazon.es/dp/B07T9K9HRX",
+                "asin": "B07T9K9HRX",
+                "rating": 4.5,
                 "category": "mochilas"
             }
         ]

@@ -5,11 +5,17 @@ import time
 import random
 from fake_useragent import UserAgent
 
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from config import amazon_config, schedule_config
+
+
 class AmazonScraper:
     def __init__(self):
         self.ua = UserAgent()
-        self.base_url = "https://www.amazon.es"
-        self.partner_tag = os.environ.get('AMAZON_PARTNER_TAG', 'camperdeals-21')
+        self.base_url = amazon_config.BASE_URL
+        self.partner_tag = amazon_config.PARTNER_TAG
+        self.products_per_run = schedule_config.PRODUCTS_PER_RUN
 
     def _build_affiliate_url(self, url, asin=None):
         """Genera URL de afiliado con el tag de Amazon Associates."""
@@ -130,8 +136,8 @@ class AmazonScraper:
             },
         ]
 
-        # Seleccionar 2 productos aleatorios para cada ejecución (evita repetición)
-        selected = random.sample(all_deals, min(2, len(all_deals)))
+        # Seleccionar N productos aleatorios para cada ejecución (evita repetición)
+        selected = random.sample(all_deals, min(self.products_per_run, len(all_deals)))
 
         # Añadir affiliate_url a todos los deals seleccionados
         for deal in selected:

@@ -32,10 +32,6 @@ jobs:
         cache: 'npm'
         cache-dependency-path: video/package-lock.json
 
-    - name: Install Remotion dependencies
-      run: npm ci
-      working-directory: video
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -43,9 +39,15 @@ jobs:
         cache: 'pip'
         cache-dependency-path: backend/requirements.txt
 
-    - name: Install Python dependencies
+    # Instalar dependencias en paralelo para ahorrar tiempo
+    - name: Install dependencies (parallel)
       run: |
-        pip install --no-cache-dir -r backend/requirements.txt
+        # Iniciar ambas instalaciones en background
+        (cd video && npm ci) &
+        pip install --no-cache-dir -r backend/requirements.txt &
+        # Esperar a que ambas terminen
+        wait
+        echo "✅ Todas las dependencias instaladas"
 
     - name: Run Automation
       env:
@@ -59,3 +61,13 @@ jobs:
         CI: true
       run: |
         python backend/main.py
+
+    # Log del resultado para debugging
+    - name: Summary
+      if: always()
+      run: |
+        echo "### TikTok Bot Run Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Triggered by**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Timestamp**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY

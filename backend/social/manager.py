@@ -16,6 +16,13 @@ from .tts_service import TTSService
 
 # Importar generadores de video AI (opcionales)
 try:
+    from .replicate_generator import ReplicateVideoGenerator, is_replicate_enabled
+    HAS_REPLICATE = True
+except ImportError:
+    HAS_REPLICATE = False
+    is_replicate_enabled = lambda: False
+
+try:
     from .ai_video_generator import AIVideoGenerator, is_ai_video_enabled
     HAS_AI_VIDEO = True
 except ImportError:
@@ -30,7 +37,7 @@ except ImportError:
 
 
 class SocialManager:
-    def __init__(self, enable_tts: bool = True, enable_ai_video: bool = True, enable_runway: bool = None):
+    def __init__(self, enable_tts: bool = True, enable_replicate: bool = None, enable_ai_video: bool = True, enable_runway: bool = None):
         print("📱 Inicializando Social Manager (TikTok/Instagram)...")
         self.uploader = TikTokUploader()
         self.temp_dir = os.path.join(os.getcwd(), "backend", "temp_assets")
@@ -48,10 +55,25 @@ class SocialManager:
             self.tts_service = TTSService(voice="es-ES-ElviraNeural")
             print("   🗣️ TTS habilitado (voz: Elvira)")
 
-        # Opción 1: AI Video Generator (gratis - HuggingFace SVD + TTS)
+        # Opción 1: Replicate (mejor calidad, bajo costo)
+        self.enable_replicate = enable_replicate if enable_replicate is not None else is_replicate_enabled()
+        self.replicate_generator = None
+        if self.enable_replicate and HAS_REPLICATE:
+            try:
+                self.replicate_generator = ReplicateVideoGenerator()
+                if self.replicate_generator.is_available():
+                    print("   🎬 Replicate habilitado (video AI profesional)")
+                else:
+                    self.enable_replicate = False
+                    print("   ℹ️ Replicate no disponible")
+            except Exception as e:
+                self.enable_replicate = False
+                print(f"   ℹ️ Replicate no disponible: {e}")
+
+        # Opción 2: AI Video Generator (gratis - HuggingFace SVD + TTS)
         self.enable_ai_video = enable_ai_video and HAS_AI_VIDEO and is_ai_video_enabled()
         self.ai_video_generator = None
-        if self.enable_ai_video:
+        if self.enable_ai_video and not self.enable_replicate:
             try:
                 self.ai_video_generator = AIVideoGenerator()
                 if self.ai_video_generator.is_available():
@@ -63,13 +85,14 @@ class SocialManager:
                 self.enable_ai_video = False
                 print(f"   ℹ️ AI Video no disponible: {e}")
 
-        # Opción 2: Runway ML (de pago pero más profesional)
+        # Opción 3: Runway ML (alternativa de pago)
         self.enable_runway = enable_runway if enable_runway is not None else is_runway_enabled()
         self.runway_generator = None
-        if self.enable_runway and HAS_RUNWAY:
+        if self.enable_runway and HAS_RUNWAY and not self.enable_replicate:
             self.runway_generator = RunwayVideoGenerator()
             print("   🎬 Runway ML habilitado (Gen-4 Turbo)")
-        elif not self.enable_ai_video:
+
+        if not self.enable_replicate and not self.enable_ai_video and not self.enable_runway:
             print("   ℹ️ Video AI deshabilitado - usando Remotion")
 
     def process_deal(self, deal_data: dict):
@@ -78,15 +101,23 @@ class SocialManager:
 
         video_path = None
 
-        # Opción 1: Video AI gratis (HuggingFace SVD + TTS)
-        if self.enable_ai_video and self.ai_video_generator:
+        # Opción 1: Replicate (mejor calidad, bajo costo)
+        if self.enable_replicate and self.replicate_generator:
+            try:
+                video_path = self._generate_replicate_video(deal_data)
+            except Exception as e:
+                print(f"   ⚠️ Replicate falló: {e}")
+                video_path = None
+
+        # Opción 2: Video AI gratis (HuggingFace SVD + TTS)
+        if not video_path and self.enable_ai_video and self.ai_video_generator:
             try:
                 video_path = self._generate_ai_video(deal_data)
             except Exception as e:
                 print(f"   ⚠️ AI Video falló: {e}")
                 video_path = None
 
-        # Opción 2: Runway ML (de pago)
+        # Opción 3: Runway ML (de pago)
         if not video_path and self.enable_runway and self.runway_generator:
             try:
                 video_path = self._generate_runway_video(deal_data)
@@ -94,7 +125,7 @@ class SocialManager:
                 print(f"   ⚠️ Runway falló: {e}")
                 video_path = None
 
-        # Opción 3: Fallback a Remotion (siempre funciona)
+        # Opción 4: Fallback a Remotion (siempre funciona)
         if not video_path:
             try:
                 video_path = self.generate_remotion_video(deal_data)
@@ -104,6 +135,28 @@ class SocialManager:
 
         if video_path and os.path.exists(video_path):
             self.upload_to_tiktok(video_path, deal_data)
+
+    def _generate_replicate_video(self, deal_data: dict) -> str:
+        """
+        Genera video con Replicate (Wan Video / SVD).
+        Producto animado con movimiento fluido + audio TTS.
+        """
+        deal_id = deal_data.get('id') or str(uuid.uuid4())[:8]
+        output_path = os.path.join(self.temp_dir, f"replicate_{deal_id}.mp4")
+
+        print(f"   🎬 Generando video con Replicate...")
+        result = self.replicate_generator.generate_video(
+            deal_data=deal_data,
+            output_path=output_path,
+            add_audio=True,
+        )
+
+        if result and os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            print(f"   ✅ Video Replicate generado: {output_path} ({file_size // 1024}KB)")
+            return output_path
+
+        return None
 
     def _generate_ai_video(self, deal_data: dict) -> str:
         """

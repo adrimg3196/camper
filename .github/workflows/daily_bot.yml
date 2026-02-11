@@ -58,7 +58,9 @@ jobs:
         HUGGINGFACE_MODEL: ${{ secrets.HUGGINGFACE_MODEL }}
         AMAZON_PARTNER_TAG: ${{ secrets.AMAZON_PARTNER_TAG }}
         TIKTOK_COOKIES_JSON: ${{ secrets.TIKTOK_COOKIES_JSON }}
-        # Runway ML API para videos AI animados
+        # Replicate API para videos AI animados (principal)
+        REPLICATE_API_TOKEN: ${{ secrets.REPLICATE_API_TOKEN }}
+        # Runway ML como fallback
         RUNWAY_API_KEY: ${{ secrets.RUNWAY_API_KEY }}
         ENABLE_RUNWAY: ${{ secrets.ENABLE_RUNWAY || 'false' }}
         CI: true

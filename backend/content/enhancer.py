@@ -94,13 +94,13 @@ Solo responde con el JSON, sin texto adicional."""
             
             Solo responde con el JSON. [/INST]"""
             
-            headers = {"Authorization": f"Bearer {self.api_key}"}
+            headers = {"Authorization": f"Bearer {self.hf_api_key}"}
             payload = {
                 "inputs": prompt,
                 "parameters": {"max_new_tokens": 250, "return_full_text": False, "temperature": 0.7}
             }
-            
-            response = requests.post(self.api_url, headers=headers, json=payload)
+
+            response = requests.post(self.hf_api_url, headers=headers, json=payload)
             
             if response.status_code == 200:
                 result = response.json()

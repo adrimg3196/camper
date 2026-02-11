@@ -1,6 +1,8 @@
 import os
 import json
 import subprocess
+import time
+import uuid
 import requests
 from .uploader import TikTokUploader
 
@@ -13,6 +15,7 @@ class SocialManager:
         os.makedirs(self.temp_dir, exist_ok=True)
         # Remotion project lives in video/ at repo root
         self.video_dir = os.path.join(os.getcwd(), "video")
+        self.max_retries = 3
 
     def process_deal(self, deal_data: dict):
         """Toma una oferta y gestiona su publicación en redes."""
@@ -28,7 +31,7 @@ class SocialManager:
             self.upload_to_tiktok(video_path, deal_data)
 
     def _download_product_image(self, image_url, deal_id):
-        """Descarga la imagen del producto a video/public/product.jpg."""
+        """Descarga la imagen del producto con retry y validación."""
         dest = os.path.join(self.video_dir, "public", "product.jpg")
         headers = {
             'User-Agent': (
@@ -38,15 +41,41 @@ class SocialManager:
             ),
             'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
         }
-        resp = requests.get(image_url, headers=headers, timeout=15)
-        if resp.status_code != 200:
-            raise Exception(f"Status {resp.status_code} descargando imagen")
-        if len(resp.content) < 100:
-            raise Exception(f"Imagen demasiado pequeña ({len(resp.content)} bytes)")
-        with open(dest, 'wb') as f:
-            f.write(resp.content)
-        print(f"   📷 Imagen descargada: {len(resp.content)} bytes -> {dest}")
-        return "product.jpg"  # nombre relativo para staticFile()
+
+        last_error = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                resp = requests.get(image_url, headers=headers, timeout=20)
+
+                if resp.status_code != 200:
+                    raise Exception(f"HTTP {resp.status_code}")
+
+                content = resp.content
+                content_len = len(content)
+
+                # Validar tamaño mínimo (evitar 404 HTML pages disfrazadas)
+                if content_len < 1000:
+                    raise Exception(f"Muy pequeña ({content_len} bytes)")
+
+                # Validar que es una imagen real (JPEG magic bytes)
+                if not (content[:2] == b'\xff\xd8' or  # JPEG
+                        content[:8] == b'\x89PNG\r\n\x1a\n' or  # PNG
+                        content[:4] == b'RIFF'):  # WebP
+                    raise Exception("No es una imagen válida (magic bytes incorrectos)")
+
+                with open(dest, 'wb') as f:
+                    f.write(content)
+
+                print(f"   📷 Imagen descargada: {content_len} bytes -> {dest}")
+                return "product.jpg"
+
+            except Exception as e:
+                last_error = e
+                print(f"   ⚠️ Intento {attempt}/{self.max_retries} falló: {e}")
+                if attempt < self.max_retries:
+                    time.sleep(2 ** attempt)  # Exponential backoff: 2s, 4s, 8s
+
+        raise Exception(f"Descarga fallida tras {self.max_retries} intentos: {last_error}")
 
     def _map_category(self, deal_data):
         """Mapea categoría del deal a categoría de video."""
@@ -104,7 +133,8 @@ class SocialManager:
             json.dump(props, f, ensure_ascii=False)
 
         # 3. Renderizar con Remotion CLI
-        output_filename = f"video_{deal_data.get('id', 'temp')}.mp4"
+        deal_id = deal_data.get('id') or str(uuid.uuid4())[:8]
+        output_filename = f"video_{deal_id}.mp4"
         output_path = os.path.join(self.temp_dir, output_filename)
 
         cmd = [

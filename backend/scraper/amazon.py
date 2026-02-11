@@ -45,10 +45,15 @@ class AmazonScraper:
             return self.get_mock_deals()
 
     def get_mock_deals(self):
-        """Devuelve ofertas reales verificadas en Amazon.es con imágenes y ASINs correctos."""
-        deals = [
+        """Devuelve ofertas reales verificadas en Amazon.es con imágenes y ASINs correctos.
+
+        NOTA: En producción, estos datos vendrían del scraping real con proxies.
+        Actualmente usamos productos verificados manualmente para garantizar que funcionen.
+        """
+        all_deals = [
+            # === COCINA CAMPING ===
             {
-                "id": "mock_1",
+                "id": "lixada_hornillo",
                 "title": "Lixada GR1 3500W Hornillo Camping Gas Portátil Plegable",
                 "price": 14.99,
                 "original_price": 19.99,
@@ -59,8 +64,9 @@ class AmazonScraper:
                 "rating": 4.3,
                 "category": "cocina-camping"
             },
+            # === MOCHILAS ===
             {
-                "id": "mock_2",
+                "id": "mountaintop_50l",
                 "title": "MOUNTAINTOP Mochila Trekking 50L Impermeable Senderismo",
                 "price": 43.99,
                 "original_price": 59.99,
@@ -70,14 +76,71 @@ class AmazonScraper:
                 "asin": "B07T9K9HRX",
                 "rating": 4.5,
                 "category": "mochilas"
-            }
+            },
+            # === ILUMINACIÓN ===
+            {
+                "id": "unbon_frontal",
+                "title": "UNBON Linterna Frontal LED Recargable USB-C 230° IPX4",
+                "price": 15.99,
+                "original_price": 24.99,
+                "discount": 36,
+                "image_url": "https://m.media-amazon.com/images/I/71wfOX6wskL._AC_SL1500_.jpg",
+                "url": "https://www.amazon.es/dp/B0B82PFNRP",
+                "asin": "B0B82PFNRP",
+                "rating": 4.4,
+                "category": "iluminacion"
+            },
+            # === SACOS DE DORMIR ===
+            {
+                "id": "qezer_saco",
+                "title": "QEZER Saco Dormir Plumón -28°C Invierno Camping Adultos",
+                "price": 89.99,
+                "original_price": 129.99,
+                "discount": 31,
+                "image_url": "https://m.media-amazon.com/images/I/617Qviy-2NL._AC_SL1500_.jpg",
+                "url": "https://www.amazon.es/dp/B0BYJ3Q2DP",
+                "asin": "B0BYJ3Q2DP",
+                "rating": 4.6,
+                "category": "dormir"
+            },
+            # === HIDRATACIÓN ===
+            {
+                "id": "sparrow_botella",
+                "title": "Super Sparrow Botella Agua Deportiva 1L Sin BPA Tritan",
+                "price": 16.99,
+                "original_price": 22.99,
+                "discount": 26,
+                "image_url": "https://m.media-amazon.com/images/I/71X+cVr9dRL._AC_SL1500_.jpg",
+                "url": "https://www.amazon.es/dp/B073YQ5KSX",
+                "asin": "B073YQ5KSX",
+                "rating": 4.5,
+                "category": "hidratacion"
+            },
+            {
+                "id": "sparrow_termo",
+                "title": "Super Sparrow Botella Termo Acero Inoxidable 750ml",
+                "price": 21.99,
+                "original_price": 29.99,
+                "discount": 27,
+                "image_url": "https://m.media-amazon.com/images/I/518JWNZFCFL._AC_SL1500_.jpg",
+                "url": "https://www.amazon.es/dp/B0B687QHHX",
+                "asin": "B0B687QHHX",
+                "rating": 4.7,
+                "category": "hidratacion"
+            },
         ]
-        # Añadir affiliate_url a todos los deals
-        for deal in deals:
+
+        # Seleccionar 2 productos aleatorios para cada ejecución (evita repetición)
+        selected = random.sample(all_deals, min(2, len(all_deals)))
+
+        # Añadir affiliate_url a todos los deals seleccionados
+        for deal in selected:
             deal['affiliate_url'] = self._build_affiliate_url(
                 deal['url'], deal.get('asin')
             )
-        return deals
+
+        print(f"📦 Seleccionados {len(selected)} productos: {[d['id'] for d in selected]}")
+        return selected
 
 if __name__ == "__main__":
     scraper = AmazonScraper()

@@ -4,8 +4,6 @@ Usa Edge TTS (Microsoft) que es gratuito y tiene voces españolas de alta calida
 """
 import os
 import asyncio
-import subprocess
-from typing import Optional
 
 
 class TTSService:
@@ -39,6 +37,34 @@ class TTSService:
         else:
             print(f"   ⚠️ Voz '{voice}' no disponible. Usando {self.voice}")
 
+    async def _synthesize_async(self, text: str, output_path: str, rate: str, pitch: str) -> dict:
+        """Versión async de synthesize usando edge-tts directamente."""
+        import edge_tts
+
+        communicate = edge_tts.Communicate(text, self.voice, rate=rate, pitch=pitch)
+        await communicate.save(output_path)
+
+        # Verificar que el archivo se creó
+        if not os.path.exists(output_path):
+            raise Exception("El archivo de audio no se creó")
+
+        file_size = os.path.getsize(output_path)
+        if file_size < 1000:
+            raise Exception(f"Archivo de audio muy pequeño ({file_size} bytes)")
+
+        # Calcular duración aproximada
+        duration = self._estimate_duration(text)
+
+        print(f"   🔊 Audio TTS generado: {output_path} ({file_size // 1024}KB, ~{duration:.1f}s)")
+
+        return {
+            "file_path": output_path,
+            "file_size": file_size,
+            "duration_seconds": duration,
+            "voice": self.voice,
+            "text": text,
+        }
+
     def synthesize(self, text: str, output_path: str, rate: str = None, pitch: str = None) -> dict:
         """
         Genera archivo de audio MP3 a partir de texto.
@@ -55,52 +81,22 @@ class TTSService:
         rate = rate or self.rate
         pitch = pitch or self.pitch
 
-        # Usar edge-tts via subprocess (más confiable que async en algunos entornos)
-        cmd = [
-            "edge-tts",
-            "--voice", self.voice,
-            "--rate", rate,
-            "--pitch", pitch,
-            "--text", text,
-            "--write-media", output_path,
-        ]
-
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
+            # Ejecutar la función async
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                result = loop.run_until_complete(
+                    self._synthesize_async(text, output_path, rate, pitch)
+                )
+                return result
+            finally:
+                loop.close()
 
-            if result.returncode != 0:
-                raise Exception(f"edge-tts falló: {result.stderr}")
-
-            # Verificar que el archivo se creó
-            if not os.path.exists(output_path):
-                raise Exception("El archivo de audio no se creó")
-
-            file_size = os.path.getsize(output_path)
-            if file_size < 1000:
-                raise Exception(f"Archivo de audio muy pequeño ({file_size} bytes)")
-
-            # Calcular duración aproximada
-            duration = self._estimate_duration(text)
-
-            print(f"   🔊 Audio TTS generado: {output_path} ({file_size // 1024}KB, ~{duration:.1f}s)")
-
-            return {
-                "file_path": output_path,
-                "file_size": file_size,
-                "duration_seconds": duration,
-                "voice": self.voice,
-                "text": text,
-            }
-
-        except FileNotFoundError:
+        except ImportError:
             raise Exception("edge-tts no está instalado. Ejecuta: pip install edge-tts")
-        except subprocess.TimeoutExpired:
-            raise Exception("Timeout generando audio TTS")
+        except Exception as e:
+            raise Exception(f"Error generando TTS: {e}")
 
     def _estimate_duration(self, text: str) -> float:
         """

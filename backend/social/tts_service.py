@@ -1,50 +1,42 @@
 """
 Servicio de Text-to-Speech para generar audio de voz para videos.
-Usa Edge TTS (Microsoft) que es gratuito y tiene voces españolas de alta calidad.
+Soporta múltiples backends: Edge TTS (alta calidad) y gTTS (fallback gratuito).
 """
 import os
 import asyncio
 
 
 class TTSService:
-    """Genera audio de voz usando Edge TTS (gratuito, voces neurales)."""
+    """Genera audio de voz con múltiples backends TTS."""
 
-    # Voces españolas disponibles en Edge TTS (Neural)
-    VOICES = {
+    # Voces españolas disponibles en Edge TTS (Neural) - solo para referencia
+    EDGE_VOICES = {
         "es-ES-AlvaroNeural": "Masculina España (Álvaro)",
         "es-ES-ElviraNeural": "Femenina España (Elvira)",
         "es-MX-DaliaNeural": "Femenina México (Dalia)",
         "es-MX-JorgeNeural": "Masculino México (Jorge)",
-        "es-AR-ElenaNeural": "Femenina Argentina (Elena)",
-        "es-CO-GonzaloNeural": "Masculino Colombia (Gonzalo)",
     }
 
-    def __init__(self, voice: str = "es-ES-ElviraNeural"):
+    def __init__(self, voice: str = "es-ES-ElviraNeural", backend: str = "auto"):
         """
         Inicializa el servicio TTS.
 
         Args:
-            voice: Nombre de la voz a usar (por defecto Elvira, femenina española)
+            voice: Nombre de la voz a usar (para Edge TTS)
+            backend: "edge", "gtts", o "auto" (intenta edge, fallback a gtts)
         """
         self.voice = voice
-        self.rate = "+10%"  # Velocidad ligeramente más rápida para TikTok
-        self.pitch = "+0Hz"  # Tono normal
+        self.backend = backend
+        self.rate = "+10%"
+        self.pitch = "+0Hz"
 
-    def set_voice(self, voice: str):
-        """Cambia la voz a usar."""
-        if voice in self.VOICES:
-            self.voice = voice
-        else:
-            print(f"   ⚠️ Voz '{voice}' no disponible. Usando {self.voice}")
-
-    async def _synthesize_async(self, text: str, output_path: str, rate: str, pitch: str) -> dict:
-        """Versión async de synthesize usando edge-tts directamente."""
+    async def _synthesize_edge(self, text: str, output_path: str) -> dict:
+        """Genera audio usando Edge TTS (alta calidad, voces neurales)."""
         import edge_tts
 
-        communicate = edge_tts.Communicate(text, self.voice, rate=rate, pitch=pitch)
+        communicate = edge_tts.Communicate(text, self.voice, rate=self.rate, pitch=self.pitch)
         await communicate.save(output_path)
 
-        # Verificar que el archivo se creó
         if not os.path.exists(output_path):
             raise Exception("El archivo de audio no se creó")
 
@@ -52,16 +44,43 @@ class TTSService:
         if file_size < 1000:
             raise Exception(f"Archivo de audio muy pequeño ({file_size} bytes)")
 
-        # Calcular duración aproximada
-        duration = self._estimate_duration(text)
+        return {
+            "file_path": output_path,
+            "file_size": file_size,
+            "duration_seconds": self._estimate_duration(text),
+            "voice": self.voice,
+            "backend": "edge-tts",
+            "text": text,
+        }
 
-        print(f"   🔊 Audio TTS generado: {output_path} ({file_size // 1024}KB, ~{duration:.1f}s)")
+    def _synthesize_gtts(self, text: str, output_path: str) -> dict:
+        """Genera audio usando gTTS (Google TTS gratuito, funciona en CI)."""
+        from gtts import gTTS
+
+        # Determinar idioma basado en la voz configurada
+        lang = "es"
+        tld = "es"  # Acento español de España
+        if "MX" in self.voice:
+            tld = "com.mx"  # Acento mexicano
+        elif "AR" in self.voice:
+            tld = "com.ar"  # Acento argentino
+
+        tts = gTTS(text=text, lang=lang, tld=tld, slow=False)
+        tts.save(output_path)
+
+        if not os.path.exists(output_path):
+            raise Exception("El archivo de audio no se creó")
+
+        file_size = os.path.getsize(output_path)
+        if file_size < 1000:
+            raise Exception(f"Archivo de audio muy pequeño ({file_size} bytes)")
 
         return {
             "file_path": output_path,
             "file_size": file_size,
-            "duration_seconds": duration,
-            "voice": self.voice,
+            "duration_seconds": self._estimate_duration(text),
+            "voice": f"gtts-{lang}-{tld}",
+            "backend": "gtts",
             "text": text,
         }
 
@@ -72,31 +91,49 @@ class TTSService:
         Args:
             text: Texto a convertir en voz
             output_path: Ruta donde guardar el archivo MP3
-            rate: Velocidad (ej: "+20%", "-10%", "default")
-            pitch: Tono (ej: "+5Hz", "-5Hz", "default")
+            rate: Velocidad (solo para Edge TTS)
+            pitch: Tono (solo para Edge TTS)
 
         Returns:
             dict con información del audio generado
         """
-        rate = rate or self.rate
-        pitch = pitch or self.pitch
+        if rate:
+            self.rate = rate
+        if pitch:
+            self.pitch = pitch
 
+        # Estrategia según backend configurado
+        if self.backend == "gtts":
+            return self._try_gtts(text, output_path)
+        elif self.backend == "edge":
+            return self._try_edge(text, output_path)
+        else:  # auto
+            return self._try_auto(text, output_path)
+
+    def _try_edge(self, text: str, output_path: str) -> dict:
+        """Intenta usar Edge TTS."""
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
-            # Ejecutar la función async
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                result = loop.run_until_complete(
-                    self._synthesize_async(text, output_path, rate, pitch)
-                )
-                return result
-            finally:
-                loop.close()
+            return loop.run_until_complete(self._synthesize_edge(text, output_path))
+        finally:
+            loop.close()
 
-        except ImportError:
-            raise Exception("edge-tts no está instalado. Ejecuta: pip install edge-tts")
+    def _try_gtts(self, text: str, output_path: str) -> dict:
+        """Intenta usar gTTS."""
+        result = self._synthesize_gtts(text, output_path)
+        print(f"   🔊 Audio TTS generado (gTTS): {output_path} ({result['file_size'] // 1024}KB)")
+        return result
+
+    def _try_auto(self, text: str, output_path: str) -> dict:
+        """Intenta Edge TTS primero, fallback a gTTS si falla."""
+        try:
+            result = self._try_edge(text, output_path)
+            print(f"   🔊 Audio TTS generado (Edge): {output_path} ({result['file_size'] // 1024}KB)")
+            return result
         except Exception as e:
-            raise Exception(f"Error generando TTS: {e}")
+            print(f"   ⚠️ Edge TTS falló ({e}), usando gTTS como fallback...")
+            return self._try_gtts(text, output_path)
 
     def _estimate_duration(self, text: str) -> float:
         """
@@ -104,63 +141,29 @@ class TTSService:
         Aproximación: ~150 palabras por minuto en español.
         """
         words = len(text.split())
-        # Ajustar por la velocidad configurada
         rate_modifier = 1.0
-        if self.rate.startswith("+"):
+        if self.rate and self.rate.startswith("+"):
             try:
                 percent = int(self.rate.replace("+", "").replace("%", ""))
                 rate_modifier = 1 - (percent / 100)
             except ValueError:
                 pass
-        elif self.rate.startswith("-"):
+        elif self.rate and self.rate.startswith("-"):
             try:
                 percent = int(self.rate.replace("-", "").replace("%", ""))
                 rate_modifier = 1 + (percent / 100)
             except ValueError:
                 pass
 
-        base_duration = (words / 150) * 60  # segundos
+        base_duration = (words / 150) * 60
         return base_duration * rate_modifier
 
-    def synthesize_segments(self, segments: list, output_dir: str) -> list:
-        """
-        Genera audio para múltiples segmentos de diálogo.
-
-        Args:
-            segments: Lista de {"start": float, "end": float, "text": str}
-            output_dir: Directorio donde guardar los archivos
-
-        Returns:
-            Lista de segmentos con info de audio añadida
-        """
-        os.makedirs(output_dir, exist_ok=True)
-        results = []
-
-        for i, segment in enumerate(segments):
-            output_path = os.path.join(output_dir, f"segment_{i:02d}.mp3")
-            try:
-                audio_info = self.synthesize(segment['text'], output_path)
-                segment_with_audio = {
-                    **segment,
-                    "audio_path": output_path,
-                    "audio_duration": audio_info['duration_seconds'],
-                }
-                results.append(segment_with_audio)
-            except Exception as e:
-                print(f"   ⚠️ Error en segmento {i}: {e}")
-                results.append({**segment, "audio_path": None, "error": str(e)})
-
-        return results
-
     def synthesize_full_script(self, text: str, output_path: str) -> dict:
-        """
-        Genera un único archivo de audio para el script completo.
-        Esto es más fluido que concatenar segmentos individuales.
-        """
+        """Alias para synthesize."""
         return self.synthesize(text, output_path)
 
 
-# Voces recomendadas para diferentes estilos
+# Presets de configuración
 VOICE_PRESETS = {
     "energetic_female": {
         "voice": "es-ES-ElviraNeural",
@@ -182,9 +185,7 @@ VOICE_PRESETS = {
 
 if __name__ == "__main__":
     # Test
-    tts = TTSService(voice="es-ES-ElviraNeural")
-
+    tts = TTSService(voice="es-ES-ElviraNeural", backend="auto")
     test_text = "¡Hola! Soy tu nuevo hornillo de camping. Perfecto para aventuras. ¡Corre al link en bio!"
-
     output = tts.synthesize(test_text, "/tmp/test_tts.mp3")
     print(f"\nResultado: {output}")

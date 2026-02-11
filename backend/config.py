@@ -37,6 +37,8 @@ class AIConfig:
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_AI_API_KEY", "")
     HUGGINGFACE_API_KEY: str = os.getenv("HUGGINGFACE_API_KEY", "")
     HUGGINGFACE_MODEL: str = os.getenv("HUGGINGFACE_MODEL", "HuggingFaceH4/zephyr-7b-beta")
+    # Veo 3.1 video generation (requiere API key con acceso a Veo)
+    ENABLE_VEO: bool = os.getenv("ENABLE_VEO", "false").lower() == "true"
 
 
 # Instancias singleton para importar directamente
@@ -44,3 +46,8 @@ video_config = VideoConfig()
 schedule_config = ScheduleConfig()
 amazon_config = AmazonConfig()
 ai_config = AIConfig()
+
+
+def is_veo_enabled() -> bool:
+    """Verifica si Veo está habilitado y configurado."""
+    return ai_config.ENABLE_VEO and bool(ai_config.GOOGLE_API_KEY)

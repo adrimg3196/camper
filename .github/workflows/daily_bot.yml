@@ -58,6 +58,7 @@ jobs:
         HUGGINGFACE_MODEL: ${{ secrets.HUGGINGFACE_MODEL }}
         AMAZON_PARTNER_TAG: ${{ secrets.AMAZON_PARTNER_TAG }}
         TIKTOK_COOKIES_JSON: ${{ secrets.TIKTOK_COOKIES_JSON }}
+        ENABLE_VEO: ${{ secrets.ENABLE_VEO || 'false' }}
         CI: true
       run: |
         python backend/main.py

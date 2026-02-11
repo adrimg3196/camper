@@ -58,7 +58,9 @@ jobs:
         HUGGINGFACE_MODEL: ${{ secrets.HUGGINGFACE_MODEL }}
         AMAZON_PARTNER_TAG: ${{ secrets.AMAZON_PARTNER_TAG }}
         TIKTOK_COOKIES_JSON: ${{ secrets.TIKTOK_COOKIES_JSON }}
-        ENABLE_VEO: ${{ secrets.ENABLE_VEO || 'false' }}
+        # Runway ML API para videos AI animados
+        RUNWAY_API_KEY: ${{ secrets.RUNWAY_API_KEY }}
+        ENABLE_RUNWAY: ${{ secrets.ENABLE_RUNWAY || 'false' }}
         CI: true
       run: |
         python backend/main.py

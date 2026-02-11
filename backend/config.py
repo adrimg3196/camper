@@ -39,6 +39,9 @@ class AIConfig:
     HUGGINGFACE_MODEL: str = os.getenv("HUGGINGFACE_MODEL", "HuggingFaceH4/zephyr-7b-beta")
     # Veo 3.1 video generation (requiere API key con acceso a Veo)
     ENABLE_VEO: bool = os.getenv("ENABLE_VEO", "false").lower() == "true"
+    # Runway ML video generation (Gen-4 Turbo)
+    RUNWAY_API_KEY: str = os.getenv("RUNWAY_API_KEY", "")
+    ENABLE_RUNWAY: bool = os.getenv("ENABLE_RUNWAY", "false").lower() == "true"
 
 
 # Instancias singleton para importar directamente
@@ -51,3 +54,13 @@ ai_config = AIConfig()
 def is_veo_enabled() -> bool:
     """Verifica si Veo está habilitado y configurado."""
     return ai_config.ENABLE_VEO and bool(ai_config.GOOGLE_API_KEY)
+
+
+def is_runway_enabled() -> bool:
+    """Verifica si Runway está habilitado y configurado."""
+    return ai_config.ENABLE_RUNWAY and bool(ai_config.RUNWAY_API_KEY)
+
+
+def get_google_ai_key() -> str:
+    """Obtiene la API key de Google AI."""
+    return ai_config.GOOGLE_API_KEY

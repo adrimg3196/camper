@@ -8,16 +8,16 @@ import shutil
 import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import video_config, is_veo_enabled
+from config import video_config, is_runway_enabled
 
 from .uploader import TikTokUploader
 from .dialogue_generator import DialogueGenerator
 from .tts_service import TTSService
-from .veo_generator import VeoVideoGenerator, generate_product_dialogue_for_veo
+from .runway_generator import RunwayVideoGenerator, generate_product_dialogue_for_runway
 
 
 class SocialManager:
-    def __init__(self, enable_tts: bool = True, enable_veo: bool = None):
+    def __init__(self, enable_tts: bool = True, enable_runway: bool = None):
         print("📱 Inicializando Social Manager (TikTok/Instagram)...")
         self.uploader = TikTokUploader()
         self.temp_dir = os.path.join(os.getcwd(), "backend", "temp_assets")
@@ -35,13 +35,13 @@ class SocialManager:
             self.tts_service = TTSService(voice="es-ES-ElviraNeural")
             print("   🗣️ TTS habilitado (voz: Elvira)")
 
-        # Generador de video AI con Veo (usar config si no se especifica)
-        self.enable_veo = enable_veo if enable_veo is not None else is_veo_enabled()
-        if self.enable_veo:
-            self.veo_generator = VeoVideoGenerator()
-            print("   🎬 Veo 3.1 habilitado (video AI)")
+        # Generador de video AI con Runway ML (usar config si no se especifica)
+        self.enable_runway = enable_runway if enable_runway is not None else is_runway_enabled()
+        if self.enable_runway:
+            self.runway_generator = RunwayVideoGenerator()
+            print("   🎬 Runway ML habilitado (Gen-4 Turbo)")
         else:
-            print("   ℹ️ Veo deshabilitado (ENABLE_VEO=false o sin API key)")
+            print("   ℹ️ Runway deshabilitado (ENABLE_RUNWAY=false o sin API key)")
 
     def process_deal(self, deal_data: dict):
         """Toma una oferta y gestiona su publicación en redes."""
@@ -49,12 +49,12 @@ class SocialManager:
 
         video_path = None
 
-        # Opción 1: Intentar generar video AI con Veo (producto animado 3D)
-        if self.enable_veo:
+        # Opción 1: Intentar generar video AI con Runway (producto animado 3D)
+        if self.enable_runway:
             try:
-                video_path = self._generate_veo_video(deal_data)
+                video_path = self._generate_runway_video(deal_data)
             except Exception as e:
-                print(f"   ⚠️ Veo falló: {e}")
+                print(f"   ⚠️ Runway falló: {e}")
                 video_path = None
 
         # Opción 2: Fallback a Remotion (video con TTS y subtítulos)
@@ -68,9 +68,9 @@ class SocialManager:
         if video_path and os.path.exists(video_path):
             self.upload_to_tiktok(video_path, deal_data)
 
-    def _generate_veo_video(self, deal_data: dict) -> str:
+    def _generate_runway_video(self, deal_data: dict) -> str:
         """
-        Genera video con Veo 3.1 donde el producto cobra vida como personaje 3D.
+        Genera video con Runway ML donde el producto cobra vida como personaje 3D.
         """
         deal_id = deal_data.get('id') or str(uuid.uuid4())[:8]
         image_url = deal_data.get('image_url')
@@ -79,20 +79,23 @@ class SocialManager:
             raise Exception("No hay imagen del producto")
 
         # Generar diálogo específico para actuación 3D
-        dialogue = generate_product_dialogue_for_veo(deal_data)
-        print(f"   🎭 Diálogo para Veo: {dialogue[:60]}...")
+        dialogue = generate_product_dialogue_for_runway(deal_data)
+        print(f"   🎭 Diálogo para Runway: {dialogue[:60]}...")
 
         # Generar video
-        output_path = os.path.join(self.temp_dir, f"veo_{deal_id}.mp4")
-        result = self.veo_generator.generate_video(
+        output_path = os.path.join(self.temp_dir, f"runway_{deal_id}.mp4")
+        result = self.runway_generator.generate_video(
             deal_data=deal_data,
             dialogue=dialogue,
-            image_path=image_url,
+            image_url=image_url,
             output_path=output_path,
+            duration=5,  # 5 segundos
             timeout=300,  # 5 minutos máximo
         )
 
         if result and os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            print(f"   ✅ Video Runway generado: {output_path} ({file_size // 1024}KB)")
             return output_path
 
         return None

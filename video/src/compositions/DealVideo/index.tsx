@@ -26,8 +26,9 @@ export const DealVideo: React.FC<DealVideoProps> = (props) => {
       <Background category={props.category} />
 
       {/* Layer 1: Product image with zoom reveal (from 0.5s - más rápido con audio) */}
+      {/* Cuando hay diálogo, el producto se anima como si "hablara" */}
       <Sequence from={Math.round(fps * 0.5)} name="ProductImage">
-        <ProductImage imageUrl={props.imageUrl} />
+        <ProductImage imageUrl={props.imageUrl} isAnimated={hasDialogue} />
       </Sequence>
 
       {/* Layer 2: Title text - solo si NO hay diálogo (el diálogo reemplaza el título) */}

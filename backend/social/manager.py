@@ -13,11 +13,24 @@ from config import video_config, is_runway_enabled
 from .uploader import TikTokUploader
 from .dialogue_generator import DialogueGenerator
 from .tts_service import TTSService
-from .runway_generator import RunwayVideoGenerator, generate_product_dialogue_for_runway
+
+# Importar generadores de video AI (opcionales)
+try:
+    from .ai_video_generator import AIVideoGenerator, is_ai_video_enabled
+    HAS_AI_VIDEO = True
+except ImportError:
+    HAS_AI_VIDEO = False
+    is_ai_video_enabled = lambda: False
+
+try:
+    from .runway_generator import RunwayVideoGenerator, generate_product_dialogue_for_runway
+    HAS_RUNWAY = True
+except ImportError:
+    HAS_RUNWAY = False
 
 
 class SocialManager:
-    def __init__(self, enable_tts: bool = True, enable_runway: bool = None):
+    def __init__(self, enable_tts: bool = True, enable_ai_video: bool = True, enable_runway: bool = None):
         print("📱 Inicializando Social Manager (TikTok/Instagram)...")
         self.uploader = TikTokUploader()
         self.temp_dir = os.path.join(os.getcwd(), "backend", "temp_assets")
@@ -35,13 +48,29 @@ class SocialManager:
             self.tts_service = TTSService(voice="es-ES-ElviraNeural")
             print("   🗣️ TTS habilitado (voz: Elvira)")
 
-        # Generador de video AI con Runway ML (usar config si no se especifica)
+        # Opción 1: AI Video Generator (gratis - HuggingFace SVD + TTS)
+        self.enable_ai_video = enable_ai_video and HAS_AI_VIDEO and is_ai_video_enabled()
+        self.ai_video_generator = None
+        if self.enable_ai_video:
+            try:
+                self.ai_video_generator = AIVideoGenerator()
+                if self.ai_video_generator.is_available():
+                    print("   🎬 AI Video (SVD + TTS) habilitado (GRATIS)")
+                else:
+                    self.enable_ai_video = False
+                    print("   ℹ️ AI Video no disponible (HuggingFace no conectado)")
+            except Exception as e:
+                self.enable_ai_video = False
+                print(f"   ℹ️ AI Video no disponible: {e}")
+
+        # Opción 2: Runway ML (de pago pero más profesional)
         self.enable_runway = enable_runway if enable_runway is not None else is_runway_enabled()
-        if self.enable_runway:
+        self.runway_generator = None
+        if self.enable_runway and HAS_RUNWAY:
             self.runway_generator = RunwayVideoGenerator()
             print("   🎬 Runway ML habilitado (Gen-4 Turbo)")
-        else:
-            print("   ℹ️ Runway deshabilitado (ENABLE_RUNWAY=false o sin API key)")
+        elif not self.enable_ai_video:
+            print("   ℹ️ Video AI deshabilitado - usando Remotion")
 
     def process_deal(self, deal_data: dict):
         """Toma una oferta y gestiona su publicación en redes."""
@@ -49,15 +78,23 @@ class SocialManager:
 
         video_path = None
 
-        # Opción 1: Intentar generar video AI con Runway (producto animado 3D)
-        if self.enable_runway:
+        # Opción 1: Video AI gratis (HuggingFace SVD + TTS)
+        if self.enable_ai_video and self.ai_video_generator:
+            try:
+                video_path = self._generate_ai_video(deal_data)
+            except Exception as e:
+                print(f"   ⚠️ AI Video falló: {e}")
+                video_path = None
+
+        # Opción 2: Runway ML (de pago)
+        if not video_path and self.enable_runway and self.runway_generator:
             try:
                 video_path = self._generate_runway_video(deal_data)
             except Exception as e:
                 print(f"   ⚠️ Runway falló: {e}")
                 video_path = None
 
-        # Opción 2: Fallback a Remotion (video con TTS y subtítulos)
+        # Opción 3: Fallback a Remotion (siempre funciona)
         if not video_path:
             try:
                 video_path = self.generate_remotion_video(deal_data)
@@ -67,6 +104,29 @@ class SocialManager:
 
         if video_path and os.path.exists(video_path):
             self.upload_to_tiktok(video_path, deal_data)
+
+    def _generate_ai_video(self, deal_data: dict) -> str:
+        """
+        Genera video con AI Video Generator (gratis):
+        - Stable Video Diffusion para animar el producto
+        - gTTS para el audio del diálogo
+        - FFmpeg para combinar
+        """
+        deal_id = deal_data.get('id') or str(uuid.uuid4())[:8]
+        output_path = os.path.join(self.temp_dir, f"ai_video_{deal_id}.mp4")
+
+        print(f"   🤖 Generando video AI (SVD + TTS)...")
+        result = self.ai_video_generator.generate_product_video(
+            deal_data=deal_data,
+            output_path=output_path,
+        )
+
+        if result and os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            print(f"   ✅ Video AI generado: {output_path} ({file_size // 1024}KB)")
+            return output_path
+
+        return None
 
     def _generate_runway_video(self, deal_data: dict) -> str:
         """

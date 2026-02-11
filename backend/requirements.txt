@@ -7,3 +7,4 @@ schedule==1.2.1
 edge-tts==6.1.19
 gTTS==2.5.1
 Pillow==10.2.0
+gradio_client==1.5.3

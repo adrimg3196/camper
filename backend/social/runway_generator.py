@@ -18,7 +18,7 @@ from config import get_google_ai_key
 
 # Configuración de Runway ML
 RUNWAY_API_KEY = os.getenv("RUNWAY_API_KEY", "")
-RUNWAY_BASE_URL = "https://api.runwayml.com/v1"
+RUNWAY_BASE_URL = "https://api.dev.runwayml.com/v1"  # Nota: usar api.dev.runwayml.com
 RUNWAY_API_VERSION = "2024-11-06"
 
 

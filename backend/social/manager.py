@@ -4,16 +4,19 @@ import json
 import subprocess
 import time
 import uuid
+import shutil
 import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import video_config
 
 from .uploader import TikTokUploader
+from .dialogue_generator import DialogueGenerator
+from .tts_service import TTSService
 
 
 class SocialManager:
-    def __init__(self):
+    def __init__(self, enable_tts: bool = True):
         print("📱 Inicializando Social Manager (TikTok/Instagram)...")
         self.uploader = TikTokUploader()
         self.temp_dir = os.path.join(os.getcwd(), "backend", "temp_assets")
@@ -23,6 +26,13 @@ class SocialManager:
         self.max_retries = video_config.MAX_RETRIES
         self.remotion_concurrency = video_config.REMOTION_CONCURRENCY
         self.remotion_timeout = video_config.REMOTION_TIMEOUT
+
+        # Servicios de voz (nuevos)
+        self.enable_tts = enable_tts
+        if enable_tts:
+            self.dialogue_generator = DialogueGenerator()
+            self.tts_service = TTSService(voice="es-ES-ElviraNeural")
+            print("   🗣️ TTS habilitado (voz: Elvira)")
 
     def process_deal(self, deal_data: dict):
         """Toma una oferta y gestiona su publicación en redes."""
@@ -36,6 +46,44 @@ class SocialManager:
 
         if video_path and os.path.exists(video_path):
             self.upload_to_tiktok(video_path, deal_data)
+
+    def _generate_talking_product_audio(self, deal_data: dict) -> dict:
+        """
+        Genera diálogo y audio TTS para video de 'producto que habla'.
+
+        Returns:
+            dict con:
+            - audio_file: nombre del archivo de audio (para Remotion)
+            - dialogue_segments: lista de segmentos con timing
+            - full_script: texto completo del diálogo
+        """
+        deal_id = deal_data.get('id') or str(uuid.uuid4())[:8]
+
+        # 1. Generar diálogo persuasivo con Gemini
+        print("   🧠 Generando diálogo con IA...")
+        segments = self.dialogue_generator.generate_product_dialogue(deal_data)
+
+        if not segments:
+            return None
+
+        # 2. Generar audio TTS
+        full_script = self.dialogue_generator.get_full_script(segments)
+        audio_filename = f"tts_{deal_id}.mp3"
+        audio_path = os.path.join(self.video_dir, "public", audio_filename)
+
+        print(f"   🔊 Generando audio TTS: '{full_script[:50]}...'")
+        try:
+            audio_info = self.tts_service.synthesize(full_script, audio_path)
+        except Exception as e:
+            print(f"   ⚠️ Error generando TTS: {e}")
+            return None
+
+        return {
+            "audio_file": audio_filename,
+            "dialogue_segments": segments,
+            "full_script": full_script,
+            "duration_seconds": audio_info.get('duration_seconds', 12),
+        }
 
     def _download_product_image(self, image_url, deal_id):
         """Descarga la imagen del producto con retry y validación."""
@@ -181,7 +229,7 @@ class SocialManager:
         return 'camping'
 
     def generate_remotion_video(self, deal_data):
-        """Genera un video profesional con Remotion (React)."""
+        """Genera un video profesional con Remotion (React) + voz AI opcional."""
         image_url = deal_data.get('image_url')
         if not image_url:
             raise Exception("No hay URL de imagen")
@@ -195,7 +243,16 @@ class SocialManager:
         print(f"   🔨 Renderizando video Remotion para: {title}")
         image_filename = self._download_product_image(image_url, deal_data.get('id'))
 
-        # 2. Preparar props
+        # 2. Generar audio TTS (si está habilitado)
+        audio_data = None
+        if self.enable_tts:
+            try:
+                audio_data = self._generate_talking_product_audio(deal_data)
+            except Exception as e:
+                print(f"   ⚠️ Error generando audio TTS: {e}")
+                audio_data = None
+
+        # 3. Preparar props
         affiliate_url = deal_data.get('affiliate_url') or deal_data.get('url') or ''
         props = {
             "title": title[:80],
@@ -210,12 +267,18 @@ class SocialManager:
         if affiliate_url:
             props["affiliateUrl"] = affiliate_url
 
+        # Añadir datos de audio si existen
+        if audio_data:
+            props["audioFile"] = audio_data["audio_file"]
+            props["dialogueSegments"] = audio_data["dialogue_segments"]
+            print(f"   🎤 Video con voz: '{audio_data['full_script'][:50]}...'")
+
         # Escribir props a archivo temporal (evita problemas de shell escaping)
         props_path = os.path.join(self.temp_dir, "remotion_props.json")
         with open(props_path, 'w') as f:
             json.dump(props, f, ensure_ascii=False)
 
-        # 3. Renderizar con Remotion CLI
+        # 4. Renderizar con Remotion CLI
         deal_id = deal_data.get('id') or str(uuid.uuid4())[:8]
         output_filename = f"video_{deal_id}.mp4"
         output_path = os.path.join(self.temp_dir, output_filename)
@@ -243,6 +306,13 @@ class SocialManager:
 
         file_size = os.path.getsize(output_path)
         print(f"   ✅ Video Remotion generado: {output_path} ({file_size // 1024}KB)")
+
+        # Limpiar archivo de audio temporal
+        if audio_data:
+            audio_path = os.path.join(self.video_dir, "public", audio_data["audio_file"])
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
+
         return output_path
 
     def upload_to_tiktok(self, video_path, deal_data):
@@ -271,12 +341,15 @@ class SocialManager:
 
 
 if __name__ == "__main__":
-    manager = SocialManager()
+    manager = SocialManager(enable_tts=True)
     manager.process_deal({
-        "title": "Tienda Test",
-        "marketing_title": "Tienda Increíble",
-        "id": "123",
-        "image_url": "https://picsum.photos/700/700",
-        "price": 29.99,
+        "title": "Lixada Hornillo Camping Gas Portátil",
+        "marketing_title": "Hornillo PRO para aventureros",
+        "id": "test123",
+        "image_url": "https://m.media-amazon.com/images/I/61jlrkrWhiL._AC_SL1000_.jpg",
+        "price": 14.99,
+        "original_price": 19.99,
+        "discount": 25,
+        "category": "cocina-camping",
     })
     manager.close()

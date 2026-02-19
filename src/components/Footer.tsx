@@ -63,7 +63,16 @@ export default function Footer() {
                 {/* Divider + Legal */}
                 <div className="mt-12 pt-8 border-t border-slate-800">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <p className="text-xs text-slate-500">© {currentYear} CampingDeals España. Todos los derechos reservados.</p>
+                        <div className="flex flex-col gap-2">
+                            <p className="text-xs text-slate-500">© {currentYear} CampingDeals España. Todos los derechos reservados.</p>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                <Link href="/aviso-legal" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Aviso Legal</Link>
+                                <Link href="/politica-privacidad" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Privacidad</Link>
+                                <Link href="/politica-cookies" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Cookies</Link>
+                                <Link href="/sobre-nosotros" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Sobre Nosotros</Link>
+                                <Link href="/contacto" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">Contacto</Link>
+                            </div>
+                        </div>
                         <p className="text-xs text-slate-500 md:text-right max-w-lg">
                             <strong className="text-slate-400">Aviso:</strong> Como Afiliado de Amazon, obtenemos ingresos por las compras adscritas que cumplen los requisitos aplicables. Los precios pueden cambiar.
                         </p>

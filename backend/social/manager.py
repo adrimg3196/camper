@@ -8,13 +8,27 @@ import shutil
 import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from config import video_config, is_runway_enabled
+from config import video_config, is_runway_enabled, is_sadtalker_enabled, is_wan_animate_enabled
 
 from .uploader import TikTokUploader
 from .dialogue_generator import DialogueGenerator
 from .tts_service import TTSService
 
 # Importar generadores de video AI (opcionales)
+# Prioridad: SadTalker (gratis) > Wan Animate (gratis) > Replicate (pago) > SVD (gratis) > Runway (pago) > Remotion
+
+try:
+    from .sadtalker_generator import SadTalkerGenerator
+    HAS_SADTALKER = True
+except ImportError:
+    HAS_SADTALKER = False
+
+try:
+    from .wan_animate_generator import WanAnimateGenerator
+    HAS_WAN_ANIMATE = True
+except ImportError:
+    HAS_WAN_ANIMATE = False
+
 try:
     from .replicate_generator import ReplicateVideoGenerator, is_replicate_enabled
     HAS_REPLICATE = True
@@ -55,7 +69,37 @@ class SocialManager:
             self.tts_service = TTSService(voice="es-ES-ElviraNeural")
             print("   🗣️ TTS habilitado (voz: Elvira)")
 
-        # Opción 1: Replicate (mejor calidad, bajo costo)
+        # === NUEVO: SadTalker (GRATIS - producto que habla) ===
+        self.enable_sadtalker = is_sadtalker_enabled() and HAS_SADTALKER
+        self.sadtalker_generator = None
+        if self.enable_sadtalker:
+            try:
+                self.sadtalker_generator = SadTalkerGenerator()
+                if self.sadtalker_generator.is_available():
+                    print("   🎭 SadTalker habilitado (producto que HABLA - GRATIS)")
+                else:
+                    self.enable_sadtalker = False
+                    print("   ℹ️ SadTalker no disponible (Space no conectado)")
+            except Exception as e:
+                self.enable_sadtalker = False
+                print(f"   ℹ️ SadTalker no disponible: {e}")
+
+        # === NUEVO: Wan Animate (GRATIS - producto gesticulando) ===
+        self.enable_wan_animate = is_wan_animate_enabled() and HAS_WAN_ANIMATE
+        self.wan_animate_generator = None
+        if self.enable_wan_animate:
+            try:
+                self.wan_animate_generator = WanAnimateGenerator()
+                if self.wan_animate_generator.is_available():
+                    print("   🎬 Wan Animate habilitado (producto GESTICULANDO - GRATIS)")
+                else:
+                    self.enable_wan_animate = False
+                    print("   ℹ️ Wan Animate no disponible (Space no conectado)")
+            except Exception as e:
+                self.enable_wan_animate = False
+                print(f"   ℹ️ Wan Animate no disponible: {e}")
+
+        # Opción 3: Replicate (mejor calidad, bajo costo)
         self.enable_replicate = enable_replicate if enable_replicate is not None else is_replicate_enabled()
         self.replicate_generator = None
         if self.enable_replicate and HAS_REPLICATE:
@@ -70,10 +114,10 @@ class SocialManager:
                 self.enable_replicate = False
                 print(f"   ℹ️ Replicate no disponible: {e}")
 
-        # Opción 2: AI Video Generator (gratis - HuggingFace SVD + TTS)
+        # Opción 4: AI Video Generator (gratis - HuggingFace SVD + TTS)
         self.enable_ai_video = enable_ai_video and HAS_AI_VIDEO and is_ai_video_enabled()
         self.ai_video_generator = None
-        if self.enable_ai_video and not self.enable_replicate:
+        if self.enable_ai_video:
             try:
                 self.ai_video_generator = AIVideoGenerator()
                 if self.ai_video_generator.is_available():
@@ -85,15 +129,22 @@ class SocialManager:
                 self.enable_ai_video = False
                 print(f"   ℹ️ AI Video no disponible: {e}")
 
-        # Opción 3: Runway ML (alternativa de pago)
+        # Opción 5: Runway ML (alternativa de pago)
         self.enable_runway = enable_runway if enable_runway is not None else is_runway_enabled()
         self.runway_generator = None
-        if self.enable_runway and HAS_RUNWAY and not self.enable_replicate:
+        if self.enable_runway and HAS_RUNWAY:
             self.runway_generator = RunwayVideoGenerator()
             print("   🎬 Runway ML habilitado (Gen-4 Turbo)")
 
-        if not self.enable_replicate and not self.enable_ai_video and not self.enable_runway:
-            print("   ℹ️ Video AI deshabilitado - usando Remotion")
+        # Resumen de generadores disponibles
+        generators = []
+        if self.enable_sadtalker: generators.append("SadTalker")
+        if self.enable_wan_animate: generators.append("Wan")
+        if self.enable_replicate: generators.append("Replicate")
+        if self.enable_ai_video: generators.append("SVD")
+        if self.enable_runway: generators.append("Runway")
+        generators.append("Remotion")  # Siempre disponible
+        print(f"   📋 Prioridad: {' → '.join(generators)}")
 
     def process_deal(self, deal_data: dict):
         """Toma una oferta y gestiona su publicación en redes."""
@@ -101,15 +152,31 @@ class SocialManager:
 
         video_path = None
 
-        # Opción 1: Replicate (mejor calidad, bajo costo)
-        if self.enable_replicate and self.replicate_generator:
+        # === OPCIÓN 1: SadTalker (GRATIS - producto que habla) ===
+        if not video_path and self.enable_sadtalker and self.sadtalker_generator:
+            try:
+                video_path = self._generate_sadtalker_video(deal_data)
+            except Exception as e:
+                print(f"   ⚠️ SadTalker falló: {e}")
+                video_path = None
+
+        # === OPCIÓN 2: Wan Animate (GRATIS - producto gesticulando) ===
+        if not video_path and self.enable_wan_animate and self.wan_animate_generator:
+            try:
+                video_path = self._generate_wan_animate_video(deal_data)
+            except Exception as e:
+                print(f"   ⚠️ Wan Animate falló: {e}")
+                video_path = None
+
+        # Opción 3: Replicate (mejor calidad, bajo costo)
+        if not video_path and self.enable_replicate and self.replicate_generator:
             try:
                 video_path = self._generate_replicate_video(deal_data)
             except Exception as e:
                 print(f"   ⚠️ Replicate falló: {e}")
                 video_path = None
 
-        # Opción 2: Video AI gratis (HuggingFace SVD + TTS)
+        # Opción 4: Video AI gratis (HuggingFace SVD + TTS)
         if not video_path and self.enable_ai_video and self.ai_video_generator:
             try:
                 video_path = self._generate_ai_video(deal_data)
@@ -117,7 +184,7 @@ class SocialManager:
                 print(f"   ⚠️ AI Video falló: {e}")
                 video_path = None
 
-        # Opción 3: Runway ML (de pago)
+        # Opción 5: Runway ML (de pago)
         if not video_path and self.enable_runway and self.runway_generator:
             try:
                 video_path = self._generate_runway_video(deal_data)
@@ -125,7 +192,7 @@ class SocialManager:
                 print(f"   ⚠️ Runway falló: {e}")
                 video_path = None
 
-        # Opción 4: Fallback a Remotion (siempre funciona)
+        # Opción 6: Fallback a Remotion (siempre funciona)
         if not video_path:
             try:
                 video_path = self.generate_remotion_video(deal_data)
@@ -135,6 +202,87 @@ class SocialManager:
 
         if video_path and os.path.exists(video_path):
             self.upload_to_tiktok(video_path, deal_data)
+
+    def _generate_sadtalker_video(self, deal_data: dict) -> str:
+        """
+        Genera video con SadTalker donde el producto "habla".
+        GRATIS via HuggingFace Spaces.
+        """
+        deal_id = deal_data.get('id') or str(uuid.uuid4())[:8]
+        output_path = os.path.join(self.temp_dir, f"sadtalker_{deal_id}.mp4")
+
+        # Generar audio TTS primero
+        audio_path = os.path.join(self.temp_dir, f"tts_{deal_id}.mp3")
+        try:
+            segments = self.dialogue_generator.generate_product_dialogue(deal_data)
+            if segments:
+                full_script = self.dialogue_generator.get_full_script(segments)
+                self.tts_service.synthesize(full_script, audio_path)
+                print(f"   🔊 Audio generado: '{full_script[:50]}...'")
+            else:
+                # Fallback a texto simple
+                fallback_text = f"¡Mira esta oferta increíble! {deal_data.get('title', 'Producto camping')} por solo {deal_data.get('price', '')} euros."
+                self.tts_service.synthesize(fallback_text, audio_path)
+        except Exception as e:
+            print(f"   ⚠️ Error generando TTS: {e}")
+            return None
+
+        if not os.path.exists(audio_path):
+            print("   ❌ No se pudo generar audio para SadTalker")
+            return None
+
+        print(f"   🎭 Generando video SadTalker...")
+        result = self.sadtalker_generator.generate_from_deal(
+            deal_data=deal_data,
+            audio_path=audio_path,
+            output_path=output_path,
+            temp_dir=self.temp_dir,
+        )
+
+        if result and os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            print(f"   ✅ Video SadTalker generado: {output_path} ({file_size // 1024}KB)")
+            return output_path
+
+        return None
+
+    def _generate_wan_animate_video(self, deal_data: dict) -> str:
+        """
+        Genera video con Wan Animate donde el producto gesticula.
+        GRATIS via HuggingFace Spaces.
+        """
+        deal_id = deal_data.get('id') or str(uuid.uuid4())[:8]
+        output_path = os.path.join(self.temp_dir, f"wan_{deal_id}.mp4")
+
+        # Generar audio TTS primero
+        audio_path = os.path.join(self.temp_dir, f"tts_{deal_id}.mp3")
+        try:
+            segments = self.dialogue_generator.generate_product_dialogue(deal_data)
+            if segments:
+                full_script = self.dialogue_generator.get_full_script(segments)
+                self.tts_service.synthesize(full_script, audio_path)
+                print(f"   🔊 Audio generado: '{full_script[:50]}...'")
+            else:
+                fallback_text = f"¡Oferta imperdible! {deal_data.get('title', 'Producto')} con descuento."
+                self.tts_service.synthesize(fallback_text, audio_path)
+        except Exception as e:
+            print(f"   ⚠️ Error generando TTS: {e}")
+            audio_path = None
+
+        print(f"   🎬 Generando video Wan Animate...")
+        result = self.wan_animate_generator.generate_from_deal(
+            deal_data=deal_data,
+            output_path=output_path,
+            audio_path=audio_path,
+            temp_dir=self.temp_dir,
+        )
+
+        if result and os.path.exists(output_path):
+            file_size = os.path.getsize(output_path)
+            print(f"   ✅ Video Wan Animate generado: {output_path} ({file_size // 1024}KB)")
+            return output_path
+
+        return None
 
     def _generate_replicate_video(self, deal_data: dict) -> str:
         """

@@ -34,14 +34,6 @@ export default function Header() {
 
                     {/* Desktop Nav */}
                     <nav className="hidden md:flex items-center gap-8">
-                        <Link href="/blog" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
-                            Blog
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300" />
-                        </Link>
-                        <Link href="/ofertas/tiendas-campana" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
-                            Tiendas
-                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300" />
-                        </Link>
                         <Link href="/#ofertas" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
                             Ofertas
                             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300" />
@@ -49,6 +41,14 @@ export default function Header() {
                         <Link href="/#categorias" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
                             Categorías
                             <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300" />
+                        </Link>
+                        <Link href="/guias" className="text-sm font-medium text-slate-300 hover:text-white transition-colors relative group">
+                            Guías
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-green-500 group-hover:w-full transition-all duration-300" />
+                        </Link>
+                        <Link href="/black-friday-camping" className="text-sm font-medium text-orange-300 hover:text-orange-200 transition-colors relative group">
+                            Black Friday
+                            <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-orange-500 group-hover:w-full transition-all duration-300" />
                         </Link>
                         <a href="https://t.me/camperdeals" target="_blank" rel="noopener noreferrer" aria-label="Únete a nuestro canal de Telegram" className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white text-sm font-medium shadow-lg shadow-blue-500/25 transition-all duration-300 hover:scale-105 hover:shadow-blue-500/40">
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
@@ -71,6 +71,8 @@ export default function Header() {
                     <nav className="flex flex-col gap-3 pt-4 border-t border-slate-700/50">
                         <Link href="/#ofertas" onClick={() => setMobileMenuOpen(false)} className="text-base font-medium text-slate-300 hover:text-white transition-colors px-2 py-2 rounded-lg hover:bg-slate-800/50">🔥 Ofertas</Link>
                         <Link href="/#categorias" onClick={() => setMobileMenuOpen(false)} className="text-base font-medium text-slate-300 hover:text-white transition-colors px-2 py-2 rounded-lg hover:bg-slate-800/50">📂 Categorías</Link>
+                        <Link href="/guias" onClick={() => setMobileMenuOpen(false)} className="text-base font-medium text-slate-300 hover:text-white transition-colors px-2 py-2 rounded-lg hover:bg-slate-800/50">📚 Guías de compra</Link>
+                        <Link href="/black-friday-camping" onClick={() => setMobileMenuOpen(false)} className="text-base font-medium text-orange-300 hover:text-orange-200 transition-colors px-2 py-2 rounded-lg hover:bg-slate-800/50">🛒 Black Friday</Link>
                         <a href="https://t.me/camperdeals" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white font-medium mt-2">
                             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" /></svg>
                             Únete a Telegram

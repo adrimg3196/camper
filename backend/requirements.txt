@@ -9,3 +9,4 @@ gTTS==2.5.1
 Pillow==10.2.0
 gradio_client==1.5.3
 replicate==0.25.1
+langextract==1.1.1

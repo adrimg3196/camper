@@ -42,6 +42,10 @@ class AIConfig:
     # Runway ML video generation (Gen-4 Turbo)
     RUNWAY_API_KEY: str = os.getenv("RUNWAY_API_KEY", "")
     ENABLE_RUNWAY: bool = os.getenv("ENABLE_RUNWAY", "false").lower() == "true"
+    # SadTalker - Producto que habla (GRATIS - HuggingFace)
+    ENABLE_SADTALKER: bool = os.getenv("ENABLE_SADTALKER", "true").lower() == "true"
+    # Wan2.2 Animate - Producto gesticulando (GRATIS - HuggingFace)
+    ENABLE_WAN_ANIMATE: bool = os.getenv("ENABLE_WAN_ANIMATE", "true").lower() == "true"
 
 
 # Instancias singleton para importar directamente
@@ -59,6 +63,16 @@ def is_veo_enabled() -> bool:
 def is_runway_enabled() -> bool:
     """Verifica si Runway está habilitado y configurado."""
     return ai_config.ENABLE_RUNWAY and bool(ai_config.RUNWAY_API_KEY)
+
+
+def is_sadtalker_enabled() -> bool:
+    """Verifica si SadTalker está habilitado (GRATIS)."""
+    return ai_config.ENABLE_SADTALKER
+
+
+def is_wan_animate_enabled() -> bool:
+    """Verifica si Wan Animate está habilitado (GRATIS)."""
+    return ai_config.ENABLE_WAN_ANIMATE
 
 
 def get_google_ai_key() -> str:

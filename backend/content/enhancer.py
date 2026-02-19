@@ -3,6 +3,7 @@ import random
 import requests
 import json
 from dotenv import load_dotenv
+from content.langextract_adapter import extract_product_signals
 
 load_dotenv()
 
@@ -12,11 +13,16 @@ class ContentEnhancer:
         self.hf_api_key = os.environ.get("HUGGINGFACE_API_KEY")
         self.hf_model = os.environ.get("HUGGINGFACE_MODEL", "HuggingFaceH4/zephyr-7b-beta")
         self.hf_api_url = f"https://router.huggingface.co/models/{self.hf_model}"
+        self.enable_langextract = os.environ.get("ENABLE_LANGEXTRACT", "false").lower() in {"1", "true", "yes", "on"}
+        self.langextract_model = os.environ.get("LANGEXTRACT_MODEL_ID", "gemini-2.5-flash")
+        self.langextract_api_key = os.environ.get("LANGEXTRACT_API_KEY") or self.google_api_key
 
     def enhance_product(self, product_data: dict) -> dict:
         """Enriquece los datos del producto usando IA."""
 
+        product_data = dict(product_data)
         print(f"🧠 Mejorando contenido para: {product_data.get('title')}...")
+        product_data = self._enrich_with_langextract(product_data)
 
         if self.google_api_key:
             return self._enhance_with_google_ai(product_data)
@@ -26,12 +32,54 @@ class ContentEnhancer:
             print("⚠️ No AI API key found. Using templates.")
             return self._enhance_with_templates(product_data)
 
+    def _enrich_with_langextract(self, product_data: dict) -> dict:
+        """Añade señales estructuradas opcionales con LangExtract."""
+        if not self.enable_langextract:
+            return product_data
+
+        try:
+            signals = extract_product_signals(
+                product_data=product_data,
+                model_id=self.langextract_model,
+                api_key=self.langextract_api_key,
+            )
+
+            if not signals:
+                return product_data
+
+            product_data["langextract_summary"] = signals.get("summary", "")
+            product_data["semantic_tags"] = signals.get("keywords", [])
+            product_data["extracted_entities"] = signals.get("entities", [])
+            print("🧩 LangExtract añadió contexto estructurado.")
+        except Exception as e:
+            print(f"⚠️ LangExtract falló: {e}. Continuando sin contexto extra.")
+
+        return product_data
+
+    def _build_langextract_context_hint(self, product_data: dict) -> str:
+        summary = str(product_data.get("langextract_summary", "")).strip()
+        tags = product_data.get("semantic_tags", [])
+        tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+
+        if not summary and not tags:
+            return ""
+
+        hint_lines = ["", "Contexto estructurado detectado por LangExtract:"]
+        if summary:
+            hint_lines.append(f"- Resumen: {summary}")
+        if tags:
+            hint_lines.append(f"- Keywords: {', '.join(tags[:10])}")
+
+        return "\n".join(hint_lines)
+
     def _enhance_with_google_ai(self, product_data):
         """Usa Google AI Studio (Gemini) API."""
         try:
+            context_hint = self._build_langextract_context_hint(product_data)
             prompt = f"""Actúa como un experto en marketing de aventuras y camping.
 Producto: "{product_data['title']}" ({product_data.get('category', 'camping')}).
 Precio: {product_data.get('price', 'N/A')}€.
+{context_hint}
 
 Escribe un JSON con estos campos:
 - marketing_title: Título corto y emocionante (max 50 letras).
@@ -82,10 +130,12 @@ Solo responde con el JSON, sin texto adicional."""
     def _enhance_with_huggingface(self, product_data):
         """Usa HuggingFace Inference API (Gratis)."""
         try:
+            context_hint = self._build_langextract_context_hint(product_data)
             # Mistral/Gemma prompt format
             prompt = f"""<s>[INST] Actúa como un experto en marketing de aventuras.
             Producto: "{product_data['title']}" ({product_data['category']}).
             Precio: {product_data['price']}€.
+            {context_hint}
             
             Escribe un JSON con estos campos:
             - marketing_title: Título corto y emocionante (max 50 letras).
@@ -149,6 +199,11 @@ Solo responde con el JSON, sin texto adicional."""
             desc = "No dejes que el frío arruine tu ruta. Este equipo te mantiene caliente y ligero para llegar a la cima."
         else:
             desc = f"La mejor oferta del día para tu próxima escapada. Aprovecha este descuento del {product_data.get('discount')}% antes de que vuele."
+
+        tags = product_data.get("semantic_tags", [])
+        tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+        if tags:
+            desc = f"{desc} Ideal para: {', '.join(tags[:3])}."
             
         product_data['marketing_description'] = desc
         

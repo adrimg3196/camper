@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import { getSiteUrl } from "@/lib/config";
+import TelegramBanner from "@/components/TelegramBanner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -94,11 +95,11 @@ export const metadata: Metadata = {
     },
 
     // Verificación de propiedad
-    verification: {
-        google: "tu-codigo-google-search-console",
-        // yandex: "tu-codigo-yandex",
-        // bing: "tu-codigo-bing",
-    },
+    // TODO: Reemplazar con tu código real de Google Search Console
+    // Para obtenerlo: search.google.com/search-console → Añadir propiedad → Método HTML tag
+    // verification: {
+    //     google: "PEGA-AQUI-TU-CODIGO",
+    // },
 
     // Alternates para idiomas y canonical
     alternates: {
@@ -123,8 +124,8 @@ export const metadata: Metadata = {
 
     // Metadatos adicionales
     other: {
-        "google-site-verification": "tu-codigo-verificacion",
-        "msvalidate.01": "tu-codigo-bing",
+        // "google-site-verification": "PEGA-AQUI-TU-CODIGO-GSC", // Descomenta cuando lo tengas
+        // "msvalidate.01": "PEGA-AQUI-TU-CODIGO-BING",
         "apple-mobile-web-app-title": "CampingDeals",
         "application-name": "CampingDeals España",
         "theme-color": "#1e293b",
@@ -300,6 +301,7 @@ export default function RootLayout({
             </head>
             <body className={`${inter.className} antialiased min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900`}>
                 {children}
+                <TelegramBanner />
 
                 {/* Google Analytics 4 - ofertascamping.es */}
                 <Script

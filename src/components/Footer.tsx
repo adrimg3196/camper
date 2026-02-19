@@ -7,7 +7,7 @@ export default function Footer() {
     return (
         <footer className="border-t border-slate-700/50 bg-slate-900/95">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
                     {/* Brand */}
                     <div className="col-span-2 md:col-span-1">
                         <Link href="/" className="flex items-center gap-2 group">
@@ -56,6 +56,19 @@ export default function Footer() {
                                     </Link>
                                 </li>
                             ))}
+                        </ul>
+                    </div>
+
+                    {/* Legal y recursos */}
+                    <div>
+                        <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Legal</h3>
+                        <ul className="space-y-2.5">
+                            <li><Link href="/guias" className="text-sm text-slate-400 hover:text-green-400 transition-colors">📚 Guías de compra</Link></li>
+                            <li><Link href="/black-friday-camping" className="text-sm text-slate-400 hover:text-orange-400 transition-colors">🛒 Black Friday</Link></li>
+                            <li><Link href="/prime-day-camping" className="text-sm text-slate-400 hover:text-orange-400 transition-colors">🔥 Prime Day</Link></li>
+                            <li><Link href="/sobre-nosotros" className="text-sm text-slate-400 hover:text-green-400 transition-colors">Sobre nosotros</Link></li>
+                            <li><Link href="/politica-privacidad" className="text-sm text-slate-400 hover:text-green-400 transition-colors">Política de privacidad</Link></li>
+                            <li><Link href="/politica-cookies" className="text-sm text-slate-400 hover:text-green-400 transition-colors">Política de cookies</Link></li>
                         </ul>
                     </div>
                 </div>

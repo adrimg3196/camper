@@ -11,7 +11,14 @@ export default function ProductCard({ product }: ProductCardProps) {
     const [imgError, setImgError] = useState(false);
 
     // Normalize product data
-    const imageUrl = product.image_url || product.imageUrl || '';
+    const rawImageUrl = product.image_url || product.imageUrl || '';
+
+    // Proxy Amazon images through our API to avoid hotlink blocking
+    const AMAZON_DOMAINS = ['m.media-amazon.com', 'images-na.ssl-images-amazon.com', 'images-eu.ssl-images-amazon.com'];
+    const needsProxy = AMAZON_DOMAINS.some(d => rawImageUrl.includes(d));
+    const imageUrl = needsProxy && rawImageUrl
+        ? `/api/image-proxy?url=${encodeURIComponent(rawImageUrl)}`
+        : rawImageUrl;
     const price = product.price || product.discountedPrice || 0;
     const originalPrice = product.original_price || product.originalPrice || 0;
     const discount = product.discount || product.discountPercentage || 0;

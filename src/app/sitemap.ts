@@ -76,6 +76,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: 'hourly',
             priority: 0.95,
         },
+        // Guías de compra (índice)
+        {
+            url: `${baseUrl}/guias`,
+            lastModified: currentDate,
+            changeFrequency: 'weekly',
+            priority: 0.9,
+        },
         // Black Friday y ofertas especiales
         {
             url: `${baseUrl}/black-friday-camping`,

@@ -57,7 +57,7 @@ const MOCK_PRODUCTS: Product[] = [
         discount: 40,
         rating: 4.5,
         review_count: 1567,
-        image_url: 'https://images.unsplash.com/photo-1582743779872-4c85d9f11e2b?w=600&q=80',
+        image_url: 'https://images.unsplash.com/photo-1571863533956-01c88e79957e?w=600&q=80',
         category: 'cocina-camping',
         url: 'https://www.amazon.es/dp/B08P54LYVS',
         affiliate_url: 'https://www.amazon.es/dp/B08P54LYVS?tag=camperdeals07-21',
